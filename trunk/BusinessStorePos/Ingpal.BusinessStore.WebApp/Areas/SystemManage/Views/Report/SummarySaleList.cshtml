@@ -1,0 +1,187 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<script src="~/Content/js/datepicker/WdatePicker.js"></script>
+<script src="~/Content/js/easyui/jquery-easyui-1.5.2/jquery.easyui.min.js"></script>
+<link href="~/Content/js/easyui/jquery-easyui-1.5.2/themes/bootstrap/easyui.css" rel="stylesheet" />
+<script>
+    $(function () {
+        gridList();
+        initData();
+    })
+    function initData() {
+        $("#Category").combotree({
+            onlyleafcheck: false,
+            url: "/SystemManage/Goods/GetGoodsTreeJson",
+            editable:true,
+            onbeforeselect: function (node) {
+                if (onlyleaf) {
+                    var t = $(this).tree;
+                    var isleaf = t('isleaf', node.target);
+                    if (!isleaf) {
+                        return false;
+                    }
+                } else {
+                    return true;
+                }
+            },
+            onSelect: function (node) {
+                $("#Category").val(node.text)
+            },
+            onLoadSuccess: function (row, data) {
+                $(".combo").css('display','table-cell');
+                $("#Category").combotree('tree').tree("collapseall");
+            }
+        });
+        ["#StoreID"].forEach(function(val,index){
+            var data=@MvcHtmlString.Create(@ViewBag.Stores);
+            $(val).bindSelectWithArr({
+                data:data,
+                id: "ID",
+                text: "Name",
+                change:function(){
+                    debugger
+                    ele = $("#GuiderID"),
+                    str = "</option>",
+                    index = ele.html().indexOf(str),
+                    qlen = str.length,
+                    s = $.trim(ele.html().substring(0, index + qlen));
+                    ele.html(s);
+                    var storeID=$("#StoreID").val();
+                    debugger
+                    if(storeID){
+                        $.get("/SaleManage/Sale/GetGuiderInfoListByStoreID", { storeID: $("#StoreID").val() }, function (data) {
+                            if (data && data != "null") {
+                                data = JSON.parse(data);
+                                ele.bindSelectWithArr({
+                                    data: data,
+                                    id: "GuiderID",
+                                    text: "GuderName"
+                                });
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    }
+    function gridList() {
+        var $gridList = $("#gridList");
+        $gridList.dataGrid({
+            url: "/SystemManage/Report/SummarySaleListJson",
+            height: $(window).height() - 128,
+            colModel: [
+                { label: '小票号', name: 'TicketCode', width: 105, align: 'center' },
+                { label: '门店名称', name: 'StoreName', width: 90, align: 'center' },
+                { label: '商品名称', name: 'GoodsName', width: 150, align: 'left' },
+                { label: '商品分类', name: 'GoodsCategory', width: 50, align: 'left' },
+                { label: '销售单价', name: 'RetailPrice', width: 60, align: 'center',formatter:'number', formatoptions:{thousandsSeparator: ','} },
+                { label: '销售数量', name: 'GoodsCount', width: 65, align: 'center' },
+                { label: '商品金额', name: 'GoodsAmount', width: 80, align: 'center',formatter:'number', formatoptions:{thousandsSeparator: ','} },
+                { label: '导    购', name: 'Guider', width: 80, align: 'center' },
+                { label: '销售日期', name: 'SaleDate', width: 105, align: 'center' }
+                , { label: '退货数量', name: 'ReturnCount', width: 50, align: 'center' }
+                 , { label: '退货金额', name: 'ReturnAmount', width: 80, align: 'left',formatter:'number', formatoptions:{thousandsSeparator: ','} }
+                ,{ label: '记录状态', name: 'RecordStatus', width: 0, align: 'center',hidden:true }
+            ],
+            pager: "#gridPager",
+            sortname: 'SaleDate,GoodsAmount desc',
+            viewrecords: true
+            ,gridComplete:function(){
+                var ids = $gridList.getDataIDs();
+                for(var i=0;i<ids.length;i++){
+                    var rowData = $gridList.getRowData(ids[i]);
+                    if(rowData.RecordStatus==-1){
+                        $('#'+ids[i]).find("td").css({"background-color":"#F2DEDE"});
+                    }
+                }
+            }
+        });
+        $("#btn_search").click(function () {
+
+            var params = { PosID: null };
+            $.each($(".input-group>input,select"), function (index, item) {
+                var $Item = $(item);
+                var name = $Item.attr("name");
+                params[name] = $.trim($Item.val());
+            });
+            var t = $('#Category').combotree('tree');
+            var n = t.tree('getSelected');
+            if(n){
+                params["Category"]=n.text;
+            }
+            params.Guider = params.GuiderID ? $("#GuiderID").find("option:selected").text() : '';
+            $gridList.jqGrid('setGridParam', {
+                postData: params,
+            }).trigger('reloadGrid');
+        });
+    }
+    function btn_export(el)
+    {
+        var params = getFormObject();
+        $(el).attr("href","/Report/ExportSummarySaleList?"+ $.objToUrl(params));
+    }
+    function getFormObject(){
+        var params = {};
+        $.each($(".input-group>input,select"), function (index, item) {
+            var $Item = $(item);
+            var name = $Item.attr("name");
+            params[name] = $.trim($Item.val());
+        });
+        debugger
+        return params;
+    }
+</script>
+<div class="topPanel" style="height: 120px;">
+    <div class="search">
+        <table>
+            <tr>
+                <td>
+                    <div class="input-group" style="margin-top: 5px;margin-bottom: 5px;">
+                        <span class="input-group-addon">门店名称</span>
+                        <select id="StoreID" name="StoreID" class="form-control required">
+                            <option value="">==请选择==</option>
+                        </select>
+                        <span class="input-group-addon">销售日期</span><input id="SaleStartTime" name="SaleStartTime" type="text" style="width: 90px;" class="form-control input-wdatepicker" onfocus="WdatePicker()" />
+                        <input id="SaleEndTime" name="SaleEndTime" type="text" style="width: 90px;" class="form-control input-wdatepicker" onfocus="WdatePicker()" />
+
+                        <span class="input-group-addon">商品名称</span>
+                        <input id="GoodsName" name="GoodsName" type="text" style="width: 90px;" class="form-control" />
+                        <span class="input-group-addon">商品类别</span>
+                        <input class="easyui-combotree" id="Category" name="Category" data-options="method:'get',valueField:'id',textField:'text'" style="margin-top:-20px; padding-top:-20px; height:29px; line-height:29px;" />
+
+                        <span class="input-group-addon">导购</span>
+                        <select id="GuiderID" name="GuiderID" class="form-control" style="width: 80px;">
+                            <option value="">==请选择==</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-addon">小票号</span>
+                        <input id="TicketCode" name="TicketCode" type="text" style="width: 115px;" class="form-control" />
+                        <span class="input-group-addon">订单状态</span>
+                        <select id="RecordStatus" name="RecordStatus" class="form-control required">
+                            <option value="">==请选择==</option>
+                            <option value="0">正常</option>
+                            <option value="-1">退货</option>
+                        </select>
+                        <span class="input-group-btn">
+                            <button id="btn_search" type="button" class="btn  btn-primary" style="margin-left: 10px;"><i class="fa fa-search"></i></button>
+                        </span>
+                    </div>
+                </td>
+            </tr>
+         </table>
+    </div>
+    <div class="toolbar">
+        <div class="btn-group" style="z-index: 1;">
+            <a id="NF-Export" class="btn btn-primary dropdown-text" onclick="btn_export(this)"><i class="fa fa-file-text"></i>导出Excel</a>
+            <a class="btn btn-primary" onclick="$.reload()"><span class="glyphicon glyphicon-refresh"></span></a>
+        </div>
+        <script>$('.toolbar').authorizeButton()</script>
+    </div>
+</div>
+<div class="gridPanel">
+    <table id="gridList"></table>
+    <div id="gridPager"></div>
+</div>

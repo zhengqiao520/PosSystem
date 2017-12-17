@@ -1,0 +1,61 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<script src="~/Content/js/datepicker/WdatePicker.js"></script>
+<script>
+    var keyValue = $.request("keyValue");
+    $(function () {
+        gridList();
+    })
+    function gridList() {
+        debugger
+        var $gridList = $("#gridDetail");
+        $gridList.dataGrid({
+            url: "/SaleManage/Sale/GetSalieDetailJson/",
+            postData: { keyValue: keyValue },
+            height: $(window).height() - 128,
+            colModel: [
+                { label: '主键', name:'ID', hidden: true },
+                { label: '商品条码', name:'BarID', width: 80, align: 'left' },
+                { label: '商品名称', name:'GoodsName', width: 80, align: 'left' },
+                { label: '商品分类', name:'GoodsCategory', width: 80, align: 'left' },
+                { label: '数量', name:'GoodsCount', width: 80, align: 'left' },
+                { label: '单价', name:'RetailPrice', width: 80, align: 'left' },
+                { label: '销售金额', name:'GoodsAmount', width: 80, align: 'left' },
+                //{ label: '折扣金额', name:'DiscountAmount', width: 80, align: 'left' },
+                {
+                    label: '销售日期', name:'SaleDate', width: 80, align: 'left',
+                    formatter: "date", formatoptions: { srcformat: 'Y-m-d', newformat: 'Y-m-d' }
+                }
+            ],
+            pager: "#gridPager",
+            sortname: 'Description asc,CreateDate desc',
+            viewrecords: true
+        });
+        $("#btn_search").click(function () {
+            $gridList.jqGrid('setGridParam', {
+                postData: { keyword: $("#txt_keyword").val() },
+            }).trigger('reloadGrid');
+        });
+    }
+</script>
+
+<div class="topPanel">
+    <div class="toolbar">
+        <div class="btn-group">
+            <a class="btn btn-primary" onclick="$.reload()"><span class="glyphicon glyphicon-refresh"></span></a>
+        </div>
+        <div class="operate">
+            <ul class="nav nav-pills">
+                <li class="first">已选中<span>1</span>项</li>
+            </ul>
+            <a href="javascript:;" class="close"></a>
+        </div>
+        <script>$('.toolbar').authorizeButton()</script>
+    </div>
+</div>
+<div class="gridPanel">
+    <table id="gridDetail"></table>
+    <div id="gridPager"></div>
+</div>

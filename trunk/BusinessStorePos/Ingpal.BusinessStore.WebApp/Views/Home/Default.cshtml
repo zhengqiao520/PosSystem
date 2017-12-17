@@ -1,0 +1,258 @@
+﻿@{
+    var Summary = ViewData["IndexSummary"] as Ingpal.BusinessStore.Model.IndexSummary;
+    var CategoryPieChart = ViewData["DailyCategoryPieData"]  as Ingpal.BusinessStore.Model.CategoryPieChartModel;
+    var DailyRankStoreBarChart = ViewData["DailyRankStoreBarData"] as Ingpal.BusinessStore.Model.SimpleDailyChartModel;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <link href="~/Content/css/framework-font.css" rel="stylesheet" />
+    <link href="~/Content/css/framework-ui.css" rel="stylesheet" />
+    <script src="~/Content/js/jquery/jquery-2.1.1.min.js"></script>
+    <link href="~/Content/css/framework-theme.css" rel="stylesheet" />
+    <link href="~/Content/js/bootstrap/bootstrap.min.css" rel="stylesheet" />
+    <link href="~/Content/css/framework-theme.css" rel="stylesheet" />
+    <script src="~/Content/js/charts/Chart.js"></script>
+    <script src="~/Content/js/echarts/echarts.min.js"></script>
+    <script src="~/Content/js/golabvar.js"></script>
+    <script src="/SystemManage/Report/RptIndexSummary"></script>
+    <script>
+        $(function ()
+        {
+            var pieLegendData=@Html.Raw(CategoryPieChart.LegendData.ToJson());
+            var pieChartData=@Html.Raw(CategoryPieChart.Data.ToJson());
+            var barRanStore_xAxisData=@Html.Raw(DailyRankStoreBarChart.xAxis.ToJson());
+            var barRanStore_seriesData= @Html.Raw(DailyRankStoreBarChart.seriesData.ToJson());
+            new IndexChartData(pieLegendData,pieChartData,'categoryPieChart').Init("CategoryPieChart");
+            new IndexChartData(barRanStore_xAxisData,barRanStore_seriesData,'rankStoreBarChart').Init("StoreRankChart");
+            InitBarSaleChart();
+            SetPosPayTypeData();
+
+        });
+        function toThousands(num) {
+            return (num || 0).toString().replace(/(\d)(?=(?:\d{3})+$)/g, '$1,');
+        }
+    </script>
+</head>
+<body>
+    <div id="areascontent">
+        <div class="rows" style="margin-bottom: 1%; border: 1px solid #e6e6e6; overflow: hidden; padding-left: 1px;">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-line-chart fa-lg" style="padding-right: 5px;"></i>关键数据实时指标
+                <div style="float: right; position: relative; top: -4px; right: 0px;">
+                    <iframe name="weather_inc" src="http://i.tianqi.com/index.php?c=code&id=1" width="330" height="35" frameborder="0" marginwidth="0" marginheight="0" scrolling="no"></iframe>
+                </div>
+                </div>
+                <div class="panel-body">
+                    <div class="dashboard-stats">
+                        <div class="dashboard-stats-item" style="background-color: #fc8675;">
+                            <h2 class="m-top-none">¥@String.Format("{0:N}",Summary.DaySaleAmount).Replace(".00","")</h2>
+                            <h5>今日销售金额</h5>
+                            <div class="stat-icon">
+                                <i class="fa fa-user fa-3x"></i>
+                            </div>
+                        </div>
+                    </div>
+                        <div class="dashboard-stats">
+                                <div class="dashboard-stats-item" style="background-color: #65cea7;">
+                                    <h2 class="m-top-none"> ¥@String.Format("{0:N}", Summary.MonthSaleAmount).Replace(".00", "")</h2>
+                                    <h5>本月销售金额</h5>
+                                    <div class="stat-icon">
+                                        <i class="fa fa-truck fa-3x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dashboard-stats">
+                                <div class="dashboard-stats-item" style="background-color: #6bafbd;">
+                                    <h2 class="m-top-none">¥@String.Format("{0:N}", Summary.DayAveSaleAmount).Replace(".00", "")</h2>
+                                    <h5>今日客单价</h5>
+                                    <div class="stat-icon">
+                                        <i class="fa fa-hdd-o fa-3x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dashboard-stats">
+                                <div class="dashboard-stats-item" style="background-color: #f3ce85;">
+                                    <h2 class="m-top-none">@Summary.MemberOrderCountPCT</h2>
+                                    <h5>今日会员订单数占比</h5>
+                                    <div class="stat-icon">
+                                        <i class="fa fa-shopping-cart fa-3x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dashboard-stats">
+                                <div class="dashboard-stats-item" style="background-color: #949FB1; margin-right: 0px;">
+                                    <h2 class="m-top-none">@Summary.MemberAmountPCT</h2>
+                                    <h5>今日会员订单金额占比</h5>
+                                    <div class="stat-icon">
+                                        <i class="fa fa-gavel fa-3x"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                    </div>
+            </div>
+        </div>
+        <div class="rows" style="margin-bottom: 1%; overflow: hidden;">
+            <div style="float: left; width: 69%;">
+                <div style="height: 350px; border: 1px solid #e6e6e6; background-color: #fff;">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-area-chart fa-lg" style="padding-right: 5px;"></i>销售数据
+                        <div style="float: right"></div>
+                        </div>
+                        <div class="panel-body" style="padding-bottom: 0px;">
+                            <div id="salarychart" style="height: 285px; width: 100%; padding-right: 10px;"> </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="float: right; width: 30%;">
+                <div style="height: 350px; border: 1px solid #e6e6e6; background-color: #fff;">
+                    <div class="panel panel-default">
+                        <div class="panel-heading"><i class="fa fa-pie-chart fa-lg" style="padding-right: 5px;"></i>品类销售数据</div>
+                        <div class="panel-body" style="padding-top: 20px;">
+                            <div id="CategoryPieChart" style="height: 285px; width: 100%; "> </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="rows" style="overflow: hidden;">
+            <div style="float: left; width: 69%;">
+                <div style="height: 350px; border: 1px solid #e6e6e6; background-color: #fff;">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-area-chart fa-lg" style="padding-right: 5px;"></i>门店每日销售情况TOP 10
+                            <div style="float: right"></div>
+                        </div>
+                        <div class="panel-body" style="padding-bottom: 0px;">
+                            <div id="StoreRankChart" style="height: 285px; width: 100%; padding-right: 10px;"> </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="float: right; width: 30%;">
+                <div style="height: 350px; border: 1px solid #e6e6e6; background-color: #fff;">
+                    <div class="panel panel-default">
+                        <div class="panel-heading"><i class="fa fa-pie-chart fa-lg" style="padding-right: 5px;"></i>今日门店支付方式</div>
+                        <div class="panel-body" style="padding-top: 20px;">
+                            <div id="paytypechart" style="height: 285px; width: 100%; "> </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="~/Content/js/ChartData.js"></script>
+    <style>
+        #copyrightcontent {
+            height: 30px;
+            line-height: 29px;
+            overflow: hidden;
+            position: absolute;
+            top: 100%;
+            margin-top: -30px;
+            width: 100%;
+            background-color: #fff;
+            border: 1px solid #e6e6e6;
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+
+        .dashboard-stats {
+            float: left;
+            width: 20%;
+        }
+
+        .dashboard-stats-item {
+            position: relative;
+            overflow: hidden;
+            color: #fff;
+            cursor: pointer;
+            height: 105px;
+            margin-right: 25px;
+            margin-bottom: 10px;
+            padding: 20px 20px;
+        }
+
+            .dashboard-stats-item .m-top-none {
+                margin-top: 2px;
+            }
+
+            .dashboard-stats-item h2 {
+                font-size: 35px;
+                font-family: inherit;
+                line-height: 1.1;
+                font-weight: 500;
+            }
+
+            .dashboard-stats-item h5 {
+                font-size: 14px;
+                font-family: inherit;
+                margin-top: 3px;
+                line-height: 1.1;
+            }
+
+
+            .dashboard-stats-item .stat-icon {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                font-size: 30px;
+                opacity: .3;
+            }
+
+        .dashboard-stats i.fa.stats-icon {
+            width: 50px;
+            padding: 20px;
+            font-size: 50px;
+            text-align: center;
+            color: #fff;
+            height: 50px;
+            border-radius: 10px;
+        }
+
+        .panel-default {
+            border: none;
+            border-radius: 0px;
+            margin-bottom: 0px;
+            box-shadow: none;
+            -webkit-box-shadow: none;
+        }
+
+            .panel-default > .panel-heading {
+                color: #777;
+                background-color: #fff;
+                border-color: #e6e6e6;
+                padding: 10px 10px;
+            }
+
+            .panel-default > .panel-body {
+                padding: 10px;
+                padding-bottom: 0px;
+            }
+
+                .panel-default > .panel-body ul {
+                    overflow: hidden;
+                    padding: 0;
+                    margin:0px;margin-top: -5px;
+                }
+
+                    .panel-default > .panel-body ul li {
+                        line-height: 27px;
+                        list-style-type: none;
+                        white-space: nowrap;
+                        text-overflow: ellipsis;
+                    }
+
+                        .panel-default > .panel-body ul li .time {
+                            color: #a1a1a1;
+                            float: right;
+                            padding-right: 5px;
+                        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,177 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<script>
+    var $gridList;
+    $(function () {
+        $(function () {
+
+            $("#StoreID").bindSelectWithArr({
+                data:@MvcHtmlString.Create(@ViewBag.Stores),
+                id: "ID",
+                text: "Name",
+                selectIndex:-1
+            });
+            gridList();
+
+        })
+        gridList();
+        $gridList.jqGrid('hideCol', "act");
+
+    })
+    function gridList() {
+        $gridList = $("#gridList");
+        $gridList.dataGrid({
+            url: "/GoodsStock/GetGoodsStockListJson",
+            height: $(window).height() - 128,
+            colModel: [
+                { label: '门店名称', name: 'StoreName', width: 105, align: 'center' },
+                { label: '商品条码', name: 'BarID', width: 120, align: 'center' },
+                { label: '商品名称', name: 'Name', width: 140, align: 'center' },
+                { label: '商品类别', name: 'Category', width: 80, align: 'center' },
+                //{ label: '进价/成本价', name: 'BuyingPrice', width: 80, align: 'center' },
+                { label: '零售价', name: 'RetailPrice', width: 90, align: 'center',formatter:'number', formatoptions:{thousandsSeparator: ','} },
+                { label: '销售数量', name: 'SaleQuantity', width: 90, align: 'center' },
+                //{ label: '销售金额', name: 'SaleAmount', width: 80, align: 'center' },
+                { label: '库存数量', name: 'StockQuantity', width: 90, align: 'center' },
+                { label: '预警数量', name: 'AlarmAmount', width: 90, align: 'center', editable: true, edittype: "text", editable: true, editrules: { required: true, number: true } },
+                { label: '设置预警数量', name: 'act', width: 100, index: 'act', sortable: false },
+                //{ label: '产地', name: 'ProductionPlace', width: 80, align: 'center' },
+                //{ label: '规格', name: 'SPEC', width: 80, align: 'center' },
+                //{ label: '型号', name: 'ModelNumber', width: 80, align: 'center' },
+                //{ label: '货号', name: 'CodeNumber', width: 80, align: 'center' },
+                //{ label: '生产批号', name: 'BatchNo', width: 80, align: 'center' },
+                { label: '单位', name: 'Unit', width: 50, align: 'center' },
+                { label: '门店编号', name: 'StoreID', width: 0, align: 'center',hidden:true }
+                //{ label: '供应商', name: 'Supplier', width: 120, align: 'center' },
+                //{ label: '备注', name: 'Remark', width: 200, align: 'left' }
+            ],
+            editurl: '/GoodsStock/SubmitGoodsStockForm',
+            gridComplete: function () {
+                $("input[name='AlarmAmount']").css({ "width": '30px', "height": "20px" })
+                var ids = $gridList.jqGrid('getDataIDs');
+                for ( var i = 0; i < ids.length; i++) {
+                    var cl = ids[i];
+                    be = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.editRow('"
+                      + cl + "');\">编辑</button>";
+                    se = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.saveRow('"
+                      + cl + "');\">保存</button>";
+                    ce = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.restoreRow('"
+                      + cl + "');\">取消</button>";
+                    jQuery("#gridList").jqGrid('setRowData', ids[i],
+                        {
+                            act: be + se
+                                //+ ce
+                        });
+                }
+            },
+            pager: "#gridPager",
+            sortname: 'RetailPrice desc,StockQuantity desc',
+            viewrecords: true
+        });
+
+        //jQuery("#gridList").jqGrid('navGrid', "#gridPager", {
+        //    edit: false
+        //});
+        $("#btn_search").click(function () {
+
+            $gridList.jqGrid('setGridParam', {
+                postData: getFormObject(),
+            }).trigger('reloadGrid');
+        });
+    }
+    function getFormObject(){
+        var params = {};
+        $.each($(".input-group>input,select"), function (index, item) {
+            var $Item = $(item);
+            var name = $Item.attr("name");
+            params[name] = $.trim($Item.val());
+        });
+        return params;
+    }
+    var gridEdit = {
+        editRow: function (cl) {
+            $gridList.editRow(cl);
+            $("input[name='AlarmAmount']").css({ "width": '30px', "height": "90%" })
+        },
+        saveRow: function (cl)
+        {
+
+            var jsonResult = null;
+            var row = $gridList.getRowData(cl);
+            $gridList.saveRow(cl, {
+                extraparam: { StoreID: row.StoreID, BarID: row.BarID }, successfunc: function (res) {
+                    jsonResult = JSON.parse(res.responseText)
+                    //系统APIbug无法再此设置内容,因此在函数外设置
+                   $.modalMsg(jsonResult.message,jsonResult.state);
+                }
+            })
+            if (jsonResult.state == "success") {
+                $gridList.jqGrid("setRowData", parseInt(cl), { "AlarmAmount": jsonResult.AlarmAmount })
+            }
+        },
+        restoreRow: function (cl) {
+            $gridList.restoreRow(cl);
+        }
+    }
+    function btn_setstore() {
+        jQuery("#gridList").jqGrid('showCol',"act");
+    }
+    //function btn_export(){
+    //    var params = {};
+    //    $.each($(".input-group>input,select"), function (index, item) {
+    //        var $Item = $(item);
+    //        var name = $Item.attr("name");
+    //        params[name] = $.trim($Item.val());
+    //    });
+    //    $.post("/GoodsStock/ExportExcel",{postData:params})
+    //}
+    function btn_export(el)
+    {
+        var params = getFormObject();
+        $(el).attr("href","/GoodsStock/ExportExcel?"+ $.objToUrl(params));
+    }
+</script>
+
+<div class="topPanel">
+    <div class="toolbar">
+        <div class="btn-group">
+            <a class="btn btn-primary" onclick="$.reload()"><span class="glyphicon glyphicon-refresh"></span></a>
+        </div>
+        <div class="btn-group">
+            <a id="NF-add"  class="btn btn-primary dropdown-text" onclick="btn_setstore()"><i class="fa fa-plus"></i>设置预警数量</a>
+            <a id="NF-Export" class="btn btn-primary dropdown-text"  onclick="btn_export(this)" ><i class="fa fa-file-text"></i>导出Excel</a>
+        </div>
+        <div class="operate">
+            <ul class="nav nav-pills">
+                <li class="first">已选中<span>1</span>项</li>
+            </ul>
+            <a href="javascript:;" class="close"></a>
+        </div>
+        <script>$('.toolbar').authorizeButton()</script>
+    </div>
+    <div class="search">
+        <table>
+            <tr>
+                <td>
+                    <div class="input-group">
+                        <span class="input-group-addon">门店名称</span>
+                        <select id="StoreID" name="StoreID" class="form-control required" style="width:140px">
+                            <option value="">==请选择==</option>
+                        </select>
+                        <span class="input-group-addon">商品分类</span><input id="Category" style="width: 130px;" name="Category" type="text" class="form-control " placeholder="请输入商品分类" />
+                        <span class="input-group-addon">商品名称/条码</span><input id="ProductName" style="width: 130px;" name="ProductName" type="text" class="form-control " placeholder="请输入商品名称或条码" />
+                        <span class="input-group-btn">
+                            <button id="btn_search" style="margin-left:15px" type="button" class="btn  btn-primary"><i class="fa fa-search"></i></button>
+                        </span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="gridPanel">
+    <table id="gridList"></table>
+    <div id="gridPager"></div>
+</div>

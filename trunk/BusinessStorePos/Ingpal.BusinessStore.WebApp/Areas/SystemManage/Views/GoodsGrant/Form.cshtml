@@ -1,0 +1,163 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutIndex.cshtml";
+}
+<script>
+    $(function () {
+        $('#layout').layout();
+        treeView();
+        gridList();
+    });
+    function treeView() {
+        $("#itemTree").treeview({
+            url: "/SystemManage/MDM/GetTreeJson",
+            onnodeclick: function (item) {
+                debugger
+                getGridList(item);
+            }
+        });
+    }
+    function gridList() {
+        var $gridList = $("#gridList");
+        $gridList.dataGrid({
+            height: $(window).height() - 96,
+            colModel: [
+                { label: "主键", name: "ID", hidden: true, key: true },
+                { label: '编码', name: 'SubName', width: 150, align: 'left' },
+                { label: '内容', name: 'SubValue', width: 150, align: 'left' },
+                { label: '排序', name: 'SortCode', width: 80, align: 'center' },
+                {
+                    label: "是否默认", name: "IsDefault", width: 60, align: "center",
+                    formatter: function (cellvalue) {
+                        return cellvalue == true ? "<i class=\"fa fa-toggle-on\"></i>" : "<i class=\"fa fa-toggle-off\"></i>";
+                    }
+                },
+                { label: "备注", name: "Description", index: "Description", width: 200, align: "left", sortable: false }
+            ]
+        });
+        //$("#btn_search").click(function () {
+        //    $gridList.jqGrid('setGridParam', {
+        //        url: "/SystemManage/ItemsData/GetGridJson",
+        //        postData: { itemId: $("#itemTree").getCurrentNode().id, keyword: $("#txt_keyword").val() },
+        //    }).trigger('reloadGrid');
+        //});
+    }
+    function getGridList(item)
+    {
+        $("#gridList").jqGrid('setGridParam', {
+            url: "/SystemManage/MDM/GetGridJson",
+            postData: { MDMTypeID: item.id },
+        }).trigger('reloadGrid');
+    }
+    function btn_add() {
+        var itemId = $("#itemTree").getCurrentNode().id;
+        var itemName = $("#itemTree").getCurrentNode().text;
+        if (!itemId) {
+            return false;
+        }
+        $.modalOpen({
+            id: "Form",
+            title: itemName + " 》新增",
+            url: "/SystemManage/MDM/Form?itemId=" + itemId,
+            width: "450px",
+            height: "350px",
+            callBack: function (iframeId) {
+                top.frames[iframeId].submitForm();
+            }
+        });
+    }
+    function btn_edit() {
+        var itemName = $("#itemTree").getCurrentNode().text;
+        var keyValue = $("#gridList").jqGridRowValue().ID;
+        $.modalOpen({
+            id: "Form",
+            title: itemName + " 》修改",
+            url: "/SystemManage/MDM/Form?keyValue=" + keyValue,
+            width: "450px",
+            height: "350px",
+            callBack: function (iframeId) {
+                top.frames[iframeId].submitForm();
+            }
+        });
+    }
+    function btn_delete() {
+        debugger
+        var selectedNode = $("#itemTree").getCurrentNode()
+        if (selectedNode) {
+            if (selectedNode.text == "支付宝接口"
+                || selectedNode.text == "支付类型"
+                || selectedNode.text == "出库类型"
+                || selectedNode.text == "入库类型") {
+                $.modalMsg("系统默认参数，不允许删除！", "warning");
+                return;
+            }
+        }
+        $.deleteForm({
+            url: "/SystemManage/MDM/DeleteForm",
+            param: { keyValue: $("#gridList").jqGridRowValue().ID },
+            success: function () {
+                $("#gridList").resetSelection();
+                $("#gridList").trigger("reloadGrid");
+            }
+        })
+    }
+    function btn_details() {
+        var keyValue = $("#gridList").jqGridRowValue().ID;
+        $.modalOpen({
+            id: "Details",
+            title: "查看字典",
+            url: "/SystemManage/ItemsData/Details?keyValue=" + keyValue,
+            width: "450px",
+            height: "470px",
+            btn: null,
+        });
+    }
+</script>
+<div class="ui-layout" id="layout" style="height: 100%; width: 100%;">
+    <div class="ui-layout-west">
+        <div id="itemTree"></div>
+    </div>
+    <div class="ui-layout-center">
+        <div class="topPanel">
+            <div class="toolbar">
+                <div class="btn-group">
+                    <a class="btn btn-primary" onclick="$.reload()"><span class="glyphicon glyphicon-refresh"></span></a>
+                </div>
+                <div class="btn-group">
+                    <a id="NF-add"  class="btn btn-primary dropdown-text" onclick="btn_add()"><i class="fa fa-plus"></i>新建主数据</a>
+                    <a class="btn btn-primary dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></a>
+                    <ul class="dropdown-menu pull-right">
+                        <li><a id="NF-itemstype"  onclick="btn_itemstype()" href="javascript:void()">主数据分类管理</a></li>
+                    </ul>
+                </div>
+                <div class="operate">
+                    <ul class="nav nav-pills">
+                        <li class="first">已选中<span>1</span>项</li>
+                        <li><a id="NF-edit" onclick="btn_edit()"><i class="fa fa-pencil-square-o"></i>修改</a></li>
+                        <li><a id="NF-delete"  onclick="btn_delete()"><i class="fa fa-trash-o"></i>删除</a></li>
+                        @*<li><a id="NF-Details"  onclick="btn_details()"><i class="fa fa-search-plus"></i>查看</a></li>*@
+                    </ul>
+                    <a href="javascript:;" class="close"></a>
+                </div>
+                <script>$('.toolbar').authorizeButton()</script>
+            </div>
+            <div class="search">
+                <table>
+                    <tr>
+                        <td>
+                            <div class="input-group">
+                                <input id="txt_keyword" type="text" class="form-control" placeholder="名称/编号" style="width: 200px;">
+                                <span class="input-group-btn">
+                                    <button id="btn_search" type="button" class="btn  btn-primary"><i class="fa fa-search"></i></button>
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="gridPanel">
+            <table id="gridList"></table>
+        </div>
+    </div>
+</div>

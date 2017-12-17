@@ -1,0 +1,101 @@
+﻿@{
+    ViewBag.Title = "Form";
+    Layout = "~/Views/Shared/_Form.cshtml";
+}
+<script src="~/Content/js/golabvar.js"></script>
+<link href="~/Content/js/easyui/jquery-easyui-1.5.2/themes/bootstrap/easyui.css" rel="stylesheet" />
+<script src="~/Content/js/easyui/jquery-easyui-1.5.2/jquery.easyui.min.js"></script>
+<script>
+    debugger
+    var keyValue = $.request("keyValue");
+    $(function () {
+        initControl();
+        if (!!keyValue) {
+            $.ajax({
+                url: "/SystemManage/Goods/GetGoodsCategoryDetails",
+                data: { keyValue: keyValue },
+                dataType: "json",
+                async: false,
+                success: function (data) {
+                    $("#ParentCategoryID").combotree('setValue', data.ParentCategoryID);
+                    $("#ParentCategoryName").val(data.ParentCategoryName);
+                    $("#form1").formSerialize(data);
+                }
+            });
+        }
+    });
+    function initControl() {
+        $("#ID").attr("readonly", keyValue ? true : false);
+        $("#ParentCategoryID").combotree({
+            onlyleafcheck: false,
+            url: "/SystemManage/Goods/GetGoodsTreeJson",
+            onbeforeselect: function (node) {
+                if (onlyleaf) {
+                    var t = $(this).tree;
+                    var isleaf = t('isleaf', node.target);
+                    if (!isleaf) {
+                        return false;
+                    }
+                } else {
+                    return true;
+                }
+            },
+            onSelect: function (node) {
+                $("#ParentCategoryName").val(node.text)
+            },
+            onloadsuccess: function (row, data) {
+                $("#ParentCategoryName").combotree('tree').tree("collapseall");
+            }
+        });
+    }
+    function submitForm() {
+        if (!$('#form1').formValid()) {
+            return false;
+        }
+        var sk = $('#ParentCategoryID').val();
+        if (sk) {
+            if (sk == keyValue) {
+                $.modalMsg("请选择其它上级分类！", "error"); return false;
+            }
+        }
+        $.submitForm({
+            url: "/SystemManage/Goods/SubmitGoodsCategoryForm?keyValue=" + keyValue,
+            param: $("#form1").formSerialize(),
+            success: function () {
+                $.currentWindow().$("#gridList").trigger("reloadGrid");
+                $.currentWindow().$("#gridList").resetSelection();
+            }
+        })
+    }
+</script>
+<form id="form1">
+    <div style="margin-top: 10px; margin-left: 10px; margin-right: 10px;">
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#">基本信息</a></li>
+        </ul>
+        <input id="ID" name="ID" type="hidden" class="form-control readonly" />
+        <div style="padding-top: 20px; margin-right: 30px;">
+            <table class="form">
+                <tr>
+                    <th class="formTitle">分类名称</th>
+                    <td class="formValue">
+                        <input id="Category" name="Category" maxlength="50" type="text" class="form-control requred" placeholder="请输入分类名称"  required/>
+                    </td>
+                    <th class="formTitle">上级分类</th>
+                    <td class="formValue">
+                        <input class="form-control easyui-combotree" id="ParentCategoryID" name="ParentCategoryID" data-options="method:'get',valueField:'id',textField:'text'" style="width:100%">
+                        <input id="ParentCategoryName" name="ParentCategoryName" type="text" class="form-control" style="display:none;" placeholder="上级分类" />
+                    </td>
+                </tr>
+                <tr>
+                    <th class="formTitle" valign="top" style="padding-top: 5px;">
+                        备注
+                    </th>
+                    <td class="formValue" colspan="3">
+                        <textarea id="Remark" name="Remark" maxlength="150" class="form-control" style="height: 60px;"></textarea>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</form>

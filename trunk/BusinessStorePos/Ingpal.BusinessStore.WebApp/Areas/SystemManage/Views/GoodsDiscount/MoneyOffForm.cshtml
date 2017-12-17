@@ -1,0 +1,209 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<link href="/Content/js/select2/select2.min.css" rel="stylesheet" />
+<script src="/Content/js/select2/select2.min.js"></script>
+<script src="/Content/js/validate/jquery.validate.min.js"></script>
+<script src="/Content/js/datepicker/WdatePicker.js"></script>
+<script>
+    debugger
+    var keyValue = $.request("keyValue");
+    $(function () {
+        gridList();
+        $("#StoreIds").bindSelectWithArr({
+            data:@MvcHtmlString.Create(@ViewBag.Stores),
+            id: "ID",
+            text: "Name"
+        });
+        if (!!keyValue) {
+            $.ajax({
+                url: "/SystemManage/GoodsDiscount/GetEventStoreFormJson",
+                data: { keyValue: keyValue },
+                dataType: "json",
+                async: false,
+                success: function (data) {
+                    $("#form1").formSerialize(data);
+                    if (data.StoreIds.length > 0) {
+                        $("#StoreIds").val(data.StoreIds.split(",")).trigger("change");
+                    }
+                }
+            });
+        }
+        $("#StoreIds").select2({
+            multiple: true,
+        });
+        $("#gview_gridDetail").css("border", "none");
+    })
+
+    function gridList() {
+        debugger
+        var $gridList = $("#gridDetail");
+        $gridList.dataGrid({
+            url: "/SystemManage/GoodsDiscount/GetEvenStoreConfigList/",
+            postData: { keyValue: keyValue },
+            height: 150,
+            width:300,
+            colModel: [
+                { label: '主键', name: 'ID', hidden: true },
+                { label: '主键', name: 'StoreEventID', hidden: true },
+                { label: '金额满', name: 'ConditionName', width: 80, align: 'center', formatter: "number", edittype: "text", editable: true, editrules: { required: true, number: true } },
+                { label: '金额减', name: 'ConditionValue', width: 80, formatter: "number", align: 'center', edittype: "text", editable: true, editrules: { required: true, number: true } }
+            ],
+            editurl:'/SaleManage/Sale/GetSalieDetailJson/',
+            cellEdit: true,
+            cellsubmit: 'clientArray',
+            onselectrow: true,
+            viewrecords: true,
+            gridComplete: function () {
+                $('.unwritten').hide()
+            }
+        });
+        $("#btn_search").click(function () {
+            $gridList.jqGrid('setGridParam', {
+                postData: { keyword: $("#txt_keyword").val() },
+            }).trigger('reloadGrid');
+        });
+    }
+
+    function submitForm()
+    {
+        var grid = $("#gridDetail")
+        if (!$('#form1').formValid()) {
+            return false;
+        }
+        var formData = $("#form1").formSerialize();
+        formData.StoreIds = formData.StoreIds == null ? "" : formData.StoreIds.toString();
+       
+        //var eventConfig = getConfigList();
+
+        debugger
+        $("#1").find('td:eq(0)').trigger('click')
+        var postData = grid.jqGrid("getRowData");
+        var allCountID = grid.jqGrid('getDataIDs')
+        var rowData = grid.jqGrid('getRowData', allCountID[allCountID.length - 1]);
+        if(rowData.ConditionName==undefined||rowData.ConditionValue==undefined){
+            $.modalMsg("请完善满减设置规则！","warning")
+            return;
+        }
+        else
+        {
+            if(parseFloat(rowData.ConditionName)<=parseFloat(rowData.ConditionValue)){
+                $.modalMsg("折扣金额不正确，请修改！","warning")
+                return;
+            }
+            postData.push(rowData)
+        }
+        debugger
+        formData.EventConfigString = JSON.stringify(postData);
+
+        if(confirm("请再次检查录入信息是否正确!")){
+            $.submitForm({
+                url: "/SystemManage/GoodsDiscount/SubmitStoreEvent?keyValue=" + keyValue,
+                param: formData,
+                success: function () {
+                    $.currentWindow().$("#gridList").resetSelection();
+                    $.currentWindow().$("#gridList").trigger("reloadGrid");
+                }
+            })
+        }
+    }
+
+    function getConfigList() {
+        var valid=true;
+        $("#1").find('td:eq(0)').trigger('click')
+        var grid = $("#gridDetail")
+        var postData = grid.jqGrid("getRowData");
+        var allCountID = grid.jqGrid('getDataIDs')
+        var rowData = grid.jqGrid('getRowData', allCountID[allCountID.length - 1]);
+        if(rowData.ConditionName==undefined||rowData.ConditionValue==undefined){
+            valid=false;
+        }
+        if (!(rowData.ConditionName == '')&&!(rowData.ConditionValue == '')) {
+            postData.push(rowData)
+        }
+        return postData
+    }
+    function addEmptyRule() 
+    {
+        debugger
+        var allCountID = $("#gridDetail").jqGrid('getDataIDs');
+        $("#gridDetail").addRowData(allCountID.length+1, {}, "last");
+    }
+    function removeRule() 
+    {
+        debugger
+      
+        var gr = jQuery("#gridDetail").jqGrid('getGridParam','selrow');
+        if( gr != null ) jQuery("#gridDetail").jqGrid('delRowData',gr);
+    }
+</script>
+<form id="form1">
+    <div style="margin-top: 10px; margin-left: 10px; margin-right: 10px;">
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#">基本信息</a></li>
+
+        </ul>
+        <div style="padding-top: 20px; margin-right: 30px;">
+            <table class="form">
+                <tr>
+                    <th class="formTitle requred">*活动名称</th>
+                    <td colspan="3" class="formValue">
+                        <input id="Name" name="Name
+                               " maxlength="150" type="text" class="form-control required" placeholder="请输入活动名称" />
+                    </td>
+                </tr>
+                <tr>
+                    <th class="formTitle requred">活动标签</th>
+                    <td colspan="3" class="formValue">
+                        <input id="EventTag" name="EventTag" maxlength="150" type="text" class="form-control required" placeholder="请输入活动标签" />
+                    </td>
+                </tr>
+                @*<tr>
+                    <th class="formTitle">活动范围</th>
+                    <td class="formValue">
+                        <label><input name="RangeFlag" type="radio" value="指定门店" checked />指定门店</label>
+                        <label><input name="RangeFlag" type="radio" value="所有门店"  />所有门店</label>
+                    </td>
+                </tr>*@
+                <tr>
+                    <th class="formTitle">活动门店</th>
+                    <td>
+                        <select id="StoreIds" name="StoreIds" required class="select2-container-multi" multiple="multiple"></select>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="formTitle requred">活动时间</th>
+                    <td colspan="3" class="formValue">
+                        <input id="StartTime" name="StartTime" style="width:180px; display:inline"  required type="text" class="form-control input-wdatepicker" onfocus="WdatePicker()" />--<input id="EndTime" name="EndTime" style="width:180px; display:inline" type="text" required class="form-control input-wdatepicker" onfocus="WdatePicker()" />
+                    </td>
+                </tr>
+                <tr>
+                    <th class="formTitle requred">满减设置</th>
+                    <td colspan="3" class="formValue">
+                        <label style="color:red;line-height:25px">*下级满减钱金额必须大于上级</label>
+                        <table id="gridDetail"></table>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4" class="formValue" style="text-align:center">
+                        <a class="btn btn-primary dropdown-text" onclick="addEmptyRule()"><span class="glyphicon fa-plus-square-o">添加满减规则</span></a>
+                        <a class="btn btn-primary dropdown-text" onclick="removeRule()"><span class="glyphicon fa-plus-square-o">移除满减规则</span></a>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="formTitle" valign="top" style="padding-top: 5px;">
+                        备注
+                    </th>
+                    <td class="formValue" colspan="3">
+                        <textarea id="Remark" name="Remark" maxlength="200" class="form-control"  style="height: 60px;"></textarea>
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+    </div>
+</form>
+
+
+

@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<SystemSettings>
+  <PrintName>Microsoft XPS Document Writer</PrintName>
+  <PageSpec>55</PageSpec>
+  <PageCount>99</PageCount>
+  <Title>欢迎惠顾</Title>
+  <Footer>谢谢惠顾！请保留此单作为退货凭证</Footer>
+  <Logo>Images\Google Photos_96px.png</Logo>
+  <IsPrintQRCode>false</IsPrintQRCode>
+</SystemSettings>

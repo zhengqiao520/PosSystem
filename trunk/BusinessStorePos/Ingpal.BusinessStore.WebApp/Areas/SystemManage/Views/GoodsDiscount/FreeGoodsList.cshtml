@@ -1,0 +1,151 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<style type="text/css">
+    input[type=checkbox],input[type=radio]{margin:14px 0 0;margin-top:8px \9;line-height:normal;width: 30px;height: 17px;}
+    .ui-jqgrid td input[type=checkbox] {
+        margin-top:6px;
+    }
+</style>
+<script>
+    $(function () {
+        
+        $("#StoreID").bindSelectWithArr({
+            data:@MvcHtmlString.Create(@ViewBag.Stores),
+            id: "ID",
+            text: "Name",
+            selectIndex:0
+        });
+        gridList();
+      
+    })
+    function gridList() {
+        var $gridList = $("#gridList");
+        $gridList.dataGrid({
+            url: "/SystemManage/GoodsDiscount/StoreEventList?eventType=2",
+            height: $(window).height() - 96,
+            colModel: [
+                { label: "主键", name: "ID", hidden: true, key: true },
+                 { label: "活动名称", name: "Name",width: 180, },
+                { label: '标签', name: 'EventTag', width: 120, align: 'center' },
+                //{ label: '活动范围', name: 'RangeFlag', width: 120, align: 'center' },
+                {
+                    label: '活动开始时间', name: 'StartTime', width: 130, align: 'center'
+                },
+                {
+                    label: '活动结束时间', name: 'EndTime',  width: 130, align: 'left'
+                },
+                {
+                   label: '活动详情', name: 'Remark', width: 150, align: 'left'
+                }
+                //,
+                //{
+                //    label: '活动类型', name: 'EventType', width: 90, align: 'left'
+                //}
+            ],
+            grouping: true,
+            viewrecords: true,
+            pager: "#gridPager",
+            sortname: 'StartTime desc',
+            viewrecords: true,
+            loadComplete:function(xhr){
+              
+            },
+            gridComplete: function () {
+            var ids = $gridList.jqGrid('getDataIDs');
+            for (var i = 0; i < ids.length; i++) {
+                var cl = ids[i];
+                be = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.editRow('"
+                  + cl + "');\">编辑</button>";
+                se = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.saveRow('"
+                  + cl + "');\">保存</button>";
+                ce = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.restoreRow('"
+                  + cl + "');\">取消</button>";
+                jQuery("#gridList").jqGrid('setRowData', ids[i],
+                    {
+                        act: be + se
+                        //+ ce
+                    });
+            }
+        },
+        });
+        $("#StoreID").change(function(item){
+            $("#btn_search").trigger("click");
+        })
+        $("#btn_search").click(function ()
+        {
+            var param=$gridList.jqGrid('getGridParam');
+            param.url= "/SystemManage/GoodsDiscount/GetGoodsGrantListExt?storeID="+$("#StoreID").val()+"&"+"grantType=1"+"&"+"discountType="+$("#IsAllowDiscount").val();
+            $gridList.trigger('reloadGrid');
+        });
+    }
+
+    $.arrayIntersect = function(a, b)
+    {
+        return $.merge($.grep(a, function(i)
+        {
+            return $.inArray(i, b) == -1;
+        }) , $.grep(b, function(i)
+        {
+            return $.inArray(i, a) == -1;
+        })
+        );
+    };
+    function btn_export(el)
+    {
+        $(el).attr("href","/GoodsGrant/ExportExcel?StoreID="+$("#StoreID").val());
+    }
+    function btn_delete() {
+        $.deleteForm({
+            url: "/SystemManage/GoodsDiscount/DeleteDiscount",
+            param: { keyValue: $("#gridList").jqGridRowValue().ID },
+            success: function () {
+                $("#gridList").trigger("reloadGrid");
+            }
+        })
+    }
+    function btn_add() {
+        $.modalOpen({
+            id: "Form",
+            title: "新建买赠活动",
+            url: "/SystemManage/GoodsDiscount/FreeGoodsForm",
+            width: "700px",
+            height: "710px",
+            callBack: function (iframeId) {
+                top.frames[iframeId].submitForm();
+            }
+        });
+    }
+    function btn_edit() {
+        var keyValue = $("#gridList").jqGridRowValue().ID;
+        $.modalOpen({
+            id: "Form",
+            title: "买赠详情",
+            url: "/SystemManage/GoodsDiscount/FreeGoodsForm?keyValue=" + keyValue,
+            width: "700px",
+            height: "710px",
+            callBack: function (iframeId) {
+                top.frames[iframeId].submitForm();
+            }
+        });
+    }
+    
+</script>
+
+<div class="topPanel">
+    <div class="toolbar">
+        <div class="btn-group">
+            <a id="NF-delete" class="btn btn-primary dropdown-text" onclick="btn_delete()"><i class="fa fa-trash-o"></i>删除活动</a>
+            <a id="NF-add" class="btn btn-primary dropdown-text" onclick="btn_edit()"><i class="fa fa-moon-o"></i>查看活动</a>
+            <a id="NF-add" class="btn btn-primary dropdown-text" onclick="btn_add()"><i class="fa fa-plus"></i>新建活动</a>
+            <a class="btn btn-primary dropdown-text" onclick="$.reload()"><span class="glyphicon glyphicon-refresh"></span></a>
+            @*<a class="btn btn-primary dropdown-text" onclick="btn_export(this)"><i class="fa fa-file-text"></i>导出Excel</a>*@
+        </div>
+        <script>$('.toolbar').authorizeButton()</script>
+    </div>
+</div>
+<div class="gridPanel">
+    <table id="gridList"></table>
+    <div id="gridPager"></div>
+</div>

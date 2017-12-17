@@ -1,0 +1,158 @@
+﻿@{
+    ViewBag.Title = "Form";
+    Layout = "~/Views/Shared/_Form.cshtml";
+}
+<link href="~/Content/js/select2/select2.min.css" rel="stylesheet" />
+<script src="~/Content/js/select2/select2.min.js"></script>
+<script>
+    var keyValue = $.request("keyValue");
+    $(function () {
+
+        if (!keyValue) {
+            setTimeout(function () {
+                $("#form1").formSerialize({ 'Account': '', 'Password':''})
+            }, 1500);
+        }
+        initControl();
+        if (!!keyValue) {
+            $.ajax({
+                url: "/SystemManage/User/GetUserFormJson",
+                data: { keyValue: keyValue },
+                dataType: "json",
+                async: false,
+                success: function (data) {
+                    $("#form1").formSerialize(data);
+                    if(data.RoleId.length>0){
+                        $("#RoleId").val(data.RoleId.split(",")).trigger("change");
+                    }
+                }
+            });
+        }
+        $("#RoleId").select2({
+            multiple: true,
+        });
+    });
+    function initControl() {
+        ["#RoleId","#StoreID"].forEach(function(val,index){
+            var data=index%2>0?@MvcHtmlString.Create(@ViewBag.Stores):@MvcHtmlString.Create(@ViewBag.Roles);
+            $(val).bindSelectWithArr({
+                data:data,
+                id: "ID",
+                text: "Name"
+            });
+        });
+    }
+    function submitForm() {
+        if (!$('#form1').formValid()) {
+            return false;
+        }
+        var formData=$("#form1").formSerialize();
+        formData.RoleId=formData.RoleId.toString();
+        $.submitForm({
+            url: "/SystemManage/User/SubmitForm?keyValue=" + keyValue,
+            param: formData,
+            success: function () {
+                $.currentWindow().$("#gridList").resetSelection();
+                $.currentWindow().$("#gridList").trigger("reloadGrid");
+            }
+        })
+    }
+</script>
+<form id="form1" autocomplete="new-password">
+    <div style="margin-top: 10px; margin-left: 10px; margin-right: 10px;">
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#">基本信息</a></li>
+            @*<li ><a href="#">扩展信息</a></li>*@
+        </ul>
+        <div style="padding-top: 20px; margin-right: 30px;">
+            <table class="form">
+                <tr>
+                    <th class="formTitle requred">*账户</th>
+                    <td class="formValue">
+                        <input id="Account" name="Account" maxlength="20" type="text" class="form-control required" placeholder="请输入账户" autocomplete="new-password" />
+                    </td>
+                    <th class="formTitle requred">*密码</th>
+                    <td class="formValue">
+					<input id="Password" name="Password" type="password" class="form-control required isPwd" placeholder="请输入至少6位的密码" autocomplete="new-password" aria-hidden="true" required />
+                    </td>
+                </tr>
+                <tr>
+                    @*<th class="formTitle">用户编码</th>
+                    <td class="formValue">
+                        <input id="UserCode" name="UserCode" type="number" min="1000" max="99999" class="form-control">
+                    </td>*@
+                    <th class="formTitle requred">*所属门店</th>
+                    <td class="formValue">
+                        <select id="StoreID" name="StoreID" class="form-control" required>
+                            <option value="">==请选择==</option>
+                        </select>
+                    </td>
+                    <th class="formTitle requred">*角色</th>
+                    <td class="formValue">
+                        <select id="RoleId" name="RoleId" class="form-control required select2-container-multi" multiple="multiple"></select>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="formTitle requred">*姓名</th>
+                    <td class="formValue">
+                        <input id="RealName" name="RealName" maxlength="20" type="text" class="form-control required" placeholder="请输入姓名" />
+                    </td>
+                    <th class="formTitle">邮箱</th>
+                    <td class="formValue">
+                        <input id="Email" name="Email" type="email" class="form-control" />
+                    </td>
+                </tr>
+                    @*<th class="formTitle">头像</th>
+                    <td class="formValue">
+                        <select id="DutyId" name="DutyId" class="form-control ">
+                            <option value="">==请选择==</option>
+                        </select>
+                    </td>*@
+                <tr>
+
+                    <th class="formTitle">性别</th>
+                    <td class="formValue">
+                        <select id="Gender" name="Gender" class="form-control required">
+                            <option value="true">男</option>
+                            <option value="false">女</option>
+                        </select>
+                    </td>
+                    <th class="formTitle">电话</th>
+                    <td class="formValue">
+                        <input id="Telephone" name="Telephone" maxlength="20" type="text" class="form-control" />
+                    </td>
+                </tr>
+                <tr>
+                    <th class="formTitle">生日</th>
+                    <td class="formValue">
+                        <input id="Birthday" name="Birthday" type="text" class="form-control input-wdatepicker" onfocus="WdatePicker()" />
+                    </td>
+                    <th class="formTitle requred">*类型</th>
+                    <td class="formValue">
+                        <select id="IsAdmin" name="IsAdmin" class="form-control">
+                            <option value="false">普通用户</option>
+                            <option value="true">系统管理员</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+
+                    @*<th class="formTitle">允许登录</th>
+                    <td class="formValue">
+                        <select id="RecordStatus" name="RecordStatus" class="form-control">
+                            <option value="true">是</option>
+                            <option value="false">否</option>
+                        </select>
+                    </td>*@
+                </tr>
+                <tr>
+                    <th class="formTitle" valign="top" style="padding-top: 5px;">备注
+                    </th>
+                    <td class="formValue" colspan="3">
+                        <textarea id="Description" name="Description" maxlength="200" class="form-control" style="height: 60px;"></textarea>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</form>

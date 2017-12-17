@@ -1,0 +1,166 @@
+﻿@{
+    ViewBag.Title = "GoodsOutList";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<script src="~/Content/js/datepicker/WdatePicker.js"></script>
+<link href="~/Content/js/easyui/jquery-easyui-1.5.2/themes/bootstrap/easyui.css" rel="stylesheet" />
+<script src="~/Content/js/easyui/jquery-easyui-1.5.2/jquery.easyui.min.js"></script>
+<script>
+    var $gridList;
+    $(function () {
+        $(function () {
+
+            $("#StoreID").bindSelectWithArr({
+                data:@MvcHtmlString.Create(@ViewBag.Stores),
+                id: "ID",
+                text: "Name",
+                selectIndex:-1
+            });
+         
+            gridList();
+
+        })
+        gridList();
+        $gridList.jqGrid('hideCol', "act");
+
+    })
+    function gridList() {
+        $gridList = $("#gridList");
+        $gridList.dataGrid({
+            url: "/GoodsStock/GoodsInListJson",
+            height: $(window).height() - 128,
+            colModel: [
+
+                { label: '入库门店', name: 'StoreName', width: 120, align: 'center' },
+               
+                { label: '商品名称', name: 'Name', width: 80, align: 'center' },
+                { label: '入库编号', name: 'GoodsInCode', width: 80, align: 'center' },
+                { label: '商品数量', name: 'InQuantityStock', width: 90, align: 'center' },
+                { label: '商品条码', name: 'BarID', width: 80, align: 'center' },
+                { label: '操作人', name: 'GoodsInHumanName', width: 90, align: 'center' },
+                { label: '入库日期', name: 'GoodsInDate', width: 80, align: 'center' },
+                { label: '入库类型', name: 'GoodsInTypeName', width: 90, align: 'center' },
+                { label: '备注', name: 'Remrks', width: 120, align: 'center' },
+            ],
+            grouping:true,
+            groupingView: {
+                groupField: ['GoodsInCode'],//分组属性
+                groupColumnShow: [false, false],//是否显示分组列
+                groupText: ['<b>{0} -- {1} 条记录</b>'],//表头显示数据(每组中包含的数据量)
+                groupCollapse: false,//加载数据时是否只显示分组的组信息
+                groupSummary: [true, false],//是否显示汇总  如果为true需要在colModel中进行配置summaryType:'max',summaryTpl:'<b>Max: {0}</b>'
+                groupDataSorted: true,//分组中的数据是否排序
+                groupOrder: ['desc', 'desc'], //分组后组的排列顺序
+                //showSummaryOnHide: true//是否在分组底部显示汇总信息并且当收起表格时是否隐藏下面的分组
+            },
+            gridComplete: function () {
+
+                var ids = $gridList.jqGrid('getDataIDs');
+                for ( var i = 0; i < ids.length; i++) {
+                    var cl = ids[i];
+                    be = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.editRow('"
+                      + cl + "');\">编辑</button>";
+                    se = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.saveRow('"
+                      + cl + "');\">保存</button>";
+                    ce = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.restoreRow('"
+                      + cl + "');\">取消</button>";
+                    jQuery("#gridList").jqGrid('setRowData', ids[i],
+                        {
+                            act: be + se
+                                //+ ce
+                        });
+                }
+            },
+            pager: "#gridPager",
+            sortname: 'ID desc',
+            viewrecords: true
+        });
+
+        //jQuery("#gridList").jqGrid('navGrid', "#gridPager", {
+        //    edit: false
+        //});
+        $("#btn_search").click(function () {
+
+            $gridList.jqGrid('setGridParam', {
+                postData: getFormObject(),
+            }).trigger('reloadGrid');
+        });
+    }
+    function getFormObject(){
+        var params = {};
+        $.each($(".input-group>input,select"), function (index, item) {
+            var $Item = $(item);
+            var name = $Item.attr("name");
+            params[name] = $.trim($Item.val());
+        });
+        return params;
+    }
+
+    function btn_setstore() {
+        jQuery("#gridList").jqGrid('showCol',"act");
+    }
+    //function btn_export(){
+    //    var params = {};
+    //    $.each($(".input-group>input,select"), function (index, item) {
+    //        var $Item = $(item);
+    //        var name = $Item.attr("name");
+    //        params[name] = $.trim($Item.val());
+    //    });
+    //    $.post("/GoodsStock/ExportExcel",{postData:params})
+    //}
+    function btn_edit() {
+        debugger
+        var keyValue = $("#gridList").jqGridRowValue().ID;
+        $.modalOpen({
+            id: "Form",
+            title: "入库明细",
+            url: "/SystemManage/GoodsStock/GoodsOutDetail?keyValue=" + keyValue,
+            width: "700px",
+            height: "710px",
+            callBack: function (iframeId) {
+                top.frames[iframeId].submitForm();
+            }
+        });
+    }
+</script>
+
+<div class="topPanel">
+    <div class="toolbar">
+        <div class="btn-group">
+            <a class="btn btn-primary" onclick="$.reload()"><span class="glyphicon glyphicon-refresh"></span></a>
+        </div>
+
+        <div class="operate">
+            <ul class="nav nav-pills">
+                <li class="first">已选中<span>1</span>项</li>
+            </ul>
+            <a href="javascript:;" class="close"></a>
+        </div>
+        <script>$('.toolbar').authorizeButton()</script>
+    </div>
+    <div class="search">
+        <table>
+            <tr>
+                <td>
+                    <div class="input-group">
+                        <span class="input-group-addon">入库门店</span>
+                        <select id="StoreID" name="StoreID" class="form-control required" style="width:100px">
+                            <option value="">==请选择==</option>
+                        </select>
+                        
+                       
+                        <span class="input-group-addon">开始日期</span><input id="BeginDate" name="BeginDate" type="text" style="width: 90px;" class="form-control input-wdatepicker" onfocus="WdatePicker()" />
+                        <span class="input-group-addon">结束日期</span><input id="EndDate" name="EndDate" type="text" style="width: 90px;" class="form-control input-wdatepicker" onfocus="WdatePicker()" />
+                        <span class="input-group-btn">
+                            <button id="btn_search" style="margin-left:15px" type="button" class="btn  btn-primary"><i class="fa fa-search"></i></button>
+                        </span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="gridPanel">
+    <table id="gridList"></table>
+    <div id="gridPager"></div>
+</div>

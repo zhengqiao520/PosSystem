@@ -1,0 +1,153 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<script src="~/Content/js/datepicker/WdatePicker.js"></script>
+<link href="~/Content/js/easyui/jquery-easyui-1.5.2/themes/bootstrap/easyui.css" rel="stylesheet" />
+<script src="~/Content/js/easyui/jquery-easyui-1.5.2/jquery.easyui.min.js"></script>
+<script>
+    $(function () {
+        gridList();
+        initData();
+    })
+    function initData() {
+        $("#StoreID").bindSelectWithArr({
+            data: top.clients.storeInfo,
+            id: "ID",
+            text: "StoreName",
+            change: function () {
+                var qk = $("#StoreID").val(),
+                    ele = $("#Guder"),
+                    str = "</option>",
+                    index = ele.html().indexOf(str),
+                    qlen = str.length,
+                    s = $.trim(ele.html().substring(0, index + qlen));
+                ele.html(s);
+                if (qk) {
+                    $.get("/SaleManage/Sale/GetGuiderInfoListByStoreID", { storeID: qk }, function (data) {
+                        if (data && data != "null") {
+                            data = JSON.parse(data);
+                            ele.bindSelectWithArr({
+                                data: data,
+                                id: "GuiderID",
+                                text: "GuderName"
+                            });
+                        }
+                    });
+                }
+            }
+        });
+    }
+    function gridList() {
+        var $gridList = $("#gridList");
+        $gridList.dataGrid({
+            url: "/SaleManage/Sale/GetSaleListJson",
+            height: $(window).height() - 128,
+            colModel: [
+                { label: '主键', name: 'Id', hidden: true },
+                { label: '流水号', name: 'RecordSerial', width: 90, align: 'center' },
+                { label: '小票号', name: 'TicketCode', width: 90, align: 'center' },
+                { label: '门店名称', name: 'StoreName', width: 105, align: 'center' },
+                { label: '合计数量', name: 'TotalCount', width: 80, align: 'center' },
+                { label: '列表总价', name: 'TotalAmount', width: 80, align: 'center', formatter: 'number', formatoptions: { thousandsSeparator: ',' } },
+                { label: '优惠金额', name: 'DiscountAmount', width: 80, align: 'center', formatter: 'number', formatoptions: { thousandsSeparator: ',' } },
+                { label: '商品金额', name: 'GoodsAmount', width: 80, align: 'center', formatter: 'number', formatoptions: { thousandsSeparator: ',' } },
+                { label: '实收金额', name: 'ActualAmount', width: 80, align: 'center', formatter: 'number', formatoptions: { thousandsSeparator: ',' } },
+                { label: '找零金额', name: 'ChangeAmount', width: 80, align: 'center', formatter: 'number', formatoptions: { thousandsSeparator: ',' } },
+                { label: '支付方式', name: 'PayType', width: 80, align: 'center', formatter: formaterPay },
+                { label: '收银员', name: 'Cashier', width: 80, align: 'center' },
+                { label: '导购', name: 'Guider', width: 80, align: 'center' },
+                { label: '平台订单号', name: 'PayOrderNo', width: 160, align: 'center' },
+                {
+                    label: '销售时间', name: 'SaleDate', width: 120, align: 'center',
+                    formatter: "date", formatoptions: { srcformat: 'Y-m-d H:i:s', newformat: 'Y-m-d H:i:s' }
+                },
+                { label: '备注', name: 'Description', width: 200, align: 'left' }
+            ],
+            pager: "#gridPager",
+            sortname: 'SaleDate,GoodsAmount desc',
+            viewrecords: true
+        });
+        $("#btn_search").click(function () {
+            debugger
+            var params = { PosID: null };
+            $.each($(".input-group>input,select"), function (index, item) {
+                var $Item = $(item);
+                var name = $Item.attr("name");
+                params[name] = $.trim($Item.val());
+            });
+            params.Guider = params.GuiderID ? $("#GuiderID").find("option:selected").text() : '';
+            $gridList.jqGrid('setGridParam', {
+                postData: params,
+            }).trigger('reloadGrid');
+        });
+    }
+
+    function btn_details() {
+        var keyValue = $("#gridList").jqGridRowValue().Id;
+        $.modalOpen({
+            id: "Form",
+            title: "销售订单详情",
+            url: "/SaleManage/Sale/Form?keyValue=" + keyValue,
+            width: "800px",
+            height: "650px",
+            btn: null,
+        });
+    }
+    function formaterPay(cellvalue, options, rowObject) {
+        return PosGlobal.PayType[cellvalue]
+    }
+</script>
+
+<div class="topPanel">
+    <div class="toolbar">
+        <div class="btn-group">
+            <a class="btn btn-primary" onclick="$.reload()"><span class="glyphicon glyphicon-refresh"></span></a>
+        </div>
+        <div class="operate">
+            <ul class="nav nav-pills">
+                <li class="first">已选中<span>1</span>项</li>
+                <li><a id="NF-edit" onclick="btn_details()"><i class="fa fa-pencil-square-o"></i>查看详情</a></li>
+            </ul>
+            <a href="javascript:;" class="close"></a>
+        </div>
+        <script>$('.toolbar').authorizeButton()</script>
+    </div>
+    <div class="search">
+        <table>
+            <tr>
+                <td>
+                    <div class="input-group">
+                        <span class="input-group-addon">门店名称</span>
+                        <select id="StoreID" name="StoreID" class="form-control required">
+                            <option value="">==请选择==</option>
+                        </select>
+                        <span class="input-group-addon">销售日期</span><input id="SaleStartTime" name="SaleStartTime" type="text" style="width: 90px;" class="form-control input-wdatepicker" onfocus="WdatePicker()" />
+                        <input id="SaleEndTime" name="SaleEndTime" type="text" style="width: 90px;" class="form-control input-wdatepicker" onfocus="WdatePicker()" />
+                        <span class="input-group-addon">付款方式</span><select id="PayType" name="PayType" class="form-control" style="width: 80px;">
+                            <option value="">==请选择==</option>
+                            <option value="0">微信</option>
+                            <option value="1">支付宝</option>
+                            <option value="2">银行卡</option>
+                            <option value="3">商场代收</option>
+                            <option value="4">现金</option>
+
+                        </select>
+                        <span class="input-group-addon">导购</span>
+                        <select id="Guder" name="Guder" class="form-control" style="width: 80px;">
+                            <option value="">==请选择==</option>
+                        </select>
+                        <span class="input-group-addon">小票号</span><input id="TicketCode" style="width: 130px;" name="TicketCode" type="text" class="form-control " placeholder="小票号码" />
+                        <span class="input-group-btn">
+                            <button id="btn_search" type="button" class="btn  btn-primary"><i class="fa fa-search"></i></button>
+                        </span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="gridPanel">
+    <table id="gridList"></table>
+    <div id="gridPager"></div>
+</div>

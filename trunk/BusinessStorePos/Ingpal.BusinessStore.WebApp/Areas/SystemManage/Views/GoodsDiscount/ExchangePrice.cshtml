@@ -1,0 +1,238 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<style type="text/css">
+    input[type=checkbox],input[type=radio]{margin:14px 0 0;margin-top:8px \9;line-height:normal;width: 30px;height: 17px;}
+    .ui-jqgrid td input[type=checkbox] {
+        margin-top:6px;
+    }
+</style>
+<script>
+    $(function () {
+        
+        $("#StoreID").bindSelectWithArr({
+            data:@MvcHtmlString.Create(@ViewBag.Stores),
+            id: "ID",
+            text: "Name",
+            selectIndex:0
+        });
+        gridList();
+      
+    })
+    function gridList() {
+        var $gridList = $("#gridList");
+        $gridList.dataGrid({
+            url: "/SystemManage/GoodsDiscount/GetExchangePriceListExt?storeID="+$("#StoreID").val()+"&"+"grantType=1",
+            height: $(window).height() - 96,
+            colModel: [
+                {
+                    label: '是否换购', name: 'IsAllowExchange', width: 90, formatter: function (cellvalue) {
+                        return cellvalue == true ? " <span class=\"label label-success\">换购商品</span>" : " <span class=\"label label-default\">否</span>";
+                    }, align: 'center'
+                },
+                { label: "主键", name: "ID", hidden: true, key: true },
+                 { label: "门店编号",width: 80, name: "StoreID" },
+                { label: '条码', name: 'BarID', width: 120, align: 'center' },
+                { label: 'ERP编码', name: 'OuterBarID', width: 120, align: 'center' },
+                {
+                    label: '商品名称', name: 'Name', width: 150, align: 'center'
+                },
+                {
+                    label: '类别', name: 'Category',  width: 70, align: 'center'
+                },
+                {
+                    label: '类别编码', name: 'CategoryID', width: 60, align: 'center'
+                },
+                { label: '零售价', name: 'RetailPrice', width: 90, formatter: "number", align: 'left' },
+                { label: '换购价', name: 'ExchangePrice', width: 130, formatter: "number", align: 'center', edittype: "text", editable: true, editrules: { required: true, number: true } },
+                { label: '操作', name: 'act', width: 100, index: 'act', sortable: false }
+
+            ],
+            grouping: true,
+            cellEdit:true,
+            multiselect: true,
+            multikey : "ctrlKey",
+            onselectrow:true,
+            groupingView: {
+                groupField: ['Category'],//分组属性
+                groupColumnShow: [true, true],//是否显示分组列
+                groupText: ['<b>{0} - {1} 条记录</b>'],//表头显示数据(每组中包含的数据量)
+                groupCollapse: false,//加载数据时是否只显示分组的组信息
+                groupSummary: [true, false],//是否显示汇总  如果为true需要在colModel中进行配置summaryType:'max',summaryTpl:'<b>Max: {0}</b>'
+                groupDataSorted: true,//分组中的数据是否排序
+                groupOrder: ['desc', 'desc'], //分组后组的排列顺序
+                //showSummaryOnHide: true//是否在分组底部显示汇总信息并且当收起表格时是否隐藏下面的分组
+            },
+            viewrecords: true,
+            pager: "#gridPager",
+            sortname: 'Category,Name asc',
+            viewrecords: true,
+            loadComplete:function(xhr){
+                $("#jqgh_gridList_cb").hide()
+                $.each(xhr.rows,function(index,item){
+                    $("#jqg_gridList_"+item.ID).attr("checked",item.IsAllowExchange)
+                    $("#jqg_gridList_"+item.ID).change(function(){
+                        if(item.BarID==null||item.BarID==''){
+                            $.modalMsg("该商品未设定条码，无法授权，请先设定条码！",'warning');
+                            $(this).attr("checked",false)
+                            return false;
+                        }
+                        item.IsAllowExchange= !item.IsAllowExchange
+                        this.checked= item.IsAllowExchange;
+                        $("#gridList").setCell(item.ID,"IsAllowExchange",item.IsAllowExchange);
+                    })
+
+                    $("#cb_gridList").change(function(){
+                        var grid=$("#gridList")
+                        grid.getDataIDs().forEach(function(id){
+                            grid.setCell(id,"IsAllowExchange",this.checked?1:0,{color:'green'})
+                        })
+                    })
+                })
+            },
+            onSelectRow:function(row){
+            },
+            editurl: '/SystemManage/GoodsDiscount/SubmitExchangePrice',
+            gridComplete: function () {
+            var ids = $gridList.jqGrid('getDataIDs');
+            for (var i = 0; i < ids.length; i++) {
+                var cl = ids[i];
+                be = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.editRow('"
+                  + cl + "');\">编辑</button>";
+                se = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.saveRow('"
+                  + cl + "');\">保存</button>";
+                ce = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.restoreRow('"
+                  + cl + "');\">取消</button>";
+                jQuery("#gridList").jqGrid('setRowData', ids[i],
+                    {
+                        act: be + se
+                        //+ ce
+                    });
+            }
+        },
+        });
+        $("#StoreID").change(function(item){
+            $("#btn_search").trigger("click");
+        })
+        $("#btn_search").click(function ()
+        {
+            var param=$gridList.jqGrid('getGridParam');
+            param.url= "/SystemManage/GoodsDiscount/GetExchangePriceListExt?storeID="+$("#StoreID").val()+"&"+"grantType=1"+"&"+"discountType="+$("#IsAllowExchange").val();
+            $gridList.trigger('reloadGrid');
+        });
+    }
+
+    $.arrayIntersect = function(a, b)
+    {
+        return $.merge($.grep(a, function(i)
+        {
+            return $.inArray(i, b) == -1;
+        }) , $.grep(b, function(i)
+        {
+            return $.inArray(i, a) == -1;
+        })
+        );
+    };
+    function btn_export(el)
+    {
+        $(el).attr("href","/GoodsGrant/ExportExcel?StoreID="+$("#StoreID").val());
+    }
+    var gridEdit = {
+        editRow: function (cl) {
+            $gridList = $("#gridList");
+            var row = $gridList.getRowData(cl);
+            $gridList.editRow(cl);
+            $("input[name='ExchangePrice']").css({ "width": '90px', "height": "10px", "margin-top": "3px", "margin-bottom": "3px" });
+        },
+        saveRow: function (cl) {
+            debugger
+            $gridList = $("#gridList");
+            var jsonResult = null;
+            var row = $gridList.getRowData(cl);
+            row.StoreID=$("#StoreID").val();
+            row.ExchangePrice=$("input[name='ExchangePrice']").val()==undefined?row.ExchangePrice:$("input[name='ExchangePrice']").val();
+            row.IsAllowExchange=!(row.IsAllowExchange.toString().indexOf('否')>-1);
+            if(row.BarID==null||row.BarID==''){
+                $.modalMsg("该商品未设定条码，请先设定条码！",'warning');
+                this.restoreRow(cl);
+                return false;
+            }
+            if(parseFloat(row.ExchangePrice)>parseFloat(row.RetailPrice)){
+                $.modalMsg("换购价必须小于零售价！",'warning');
+                this.restoreRow(cl);
+                return false;
+            }
+            if(!parseFloat(row.ExchangePrice)>0){
+                $.modalMsg("换购价必须大于0！",'warning');
+                this.restoreRow(cl);
+                return false;
+            }
+            gridEdit.editRow(cl);
+            $gridList.saveRow(cl, {
+                extraparam: row, successfunc: function (res) {
+                    debugger
+                    jsonResult = JSON.parse(res.responseText)
+                    //系统APIbug无法再此设置内容,因此在函数外设置
+                    $.modalMsg(jsonResult.message, jsonResult.state);
+                }
+            })
+            if(null!=jsonResult){
+                if (jsonResult.state == "success") {
+                    $gridList.trigger("reloadGrid");
+                }
+            }
+        },
+        restoreRow: function (cl) {
+            $gridList.restoreRow(cl);
+        }
+    }
+</script>
+
+<div class="topPanel">
+    <div class="toolbar">
+        <div class="btn-group">
+            @*<a class="btn btn-primary" onclick="grantGoods(this)" style="margin-right:15px"><span class="glyphicon glyphicon-refresh"></span>引用模板</a>
+             <a class="btn btn-primary dropdown-text" onclick="grantGoods(this)"><span class="glyphicon glyphicon-refresh"></span>保存授权</a>*@
+             @*<a class="btn btn-primary dropdown-text" onclick="javascript:$('#btn_search').trigger('click')"><span class="glyphicon glyphicon-refresh"></span>取消</a>*@
+            <a class="btn btn-primary dropdown-text" onclick="$.reload()"><span class="glyphicon glyphicon-refresh"></span></a>
+            @*<a class="btn btn-primary dropdown-text" onclick="btn_export(this)"><i class="fa fa-file-text"></i>导出Excel</a>*@
+        </div>
+        @*<div class="operate">
+            <ul class="nav nav-pills">
+                <li class="first">已选中<span>1</span>项</li>
+
+            </ul>
+            <a href="javascript:;" class="close"></a>
+        </div>*@
+        <script>$('.toolbar').authorizeButton()</script>
+    </div>
+    <div class="search">
+            <table>
+                <tr>
+                    <td>
+                        <div class="input-group">
+                            <span class="input-group-addon">门店编号</span>
+                            <select id="StoreID" name="StoreID" class="form-control required" style="width:140px">
+                                <option value="">==请选择==</option>
+                            </select>
+                            <span class="input-group-addon">换购状态</span>
+                            <select id="IsAllowExchange" name="IsAllowExchange" class="form-control required" style="width:90px">
+                                <option value="">全部</option>
+                                <option value="1">已生效</option>
+                                <option value="-1">未生效</option>
+                            </select>
+                            <span class="input-group-btn">
+                                <button id="btn_search" type="button" class="btn  btn-primary"><i class="fa fa-search"></i></button>
+                            </span>                            
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+</div>
+<div class="gridPanel">
+    <table id="gridList"></table>
+    <div id="gridPager"></div>
+</div>

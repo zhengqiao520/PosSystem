@@ -1,0 +1,204 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<style type="text/css">
+    input[type=checkbox], input[type=radio] {
+        margin: 14px 0 0;
+        margin-top: 8px \9;
+        line-height: normal;
+        width: 30px;
+        height: 17px;
+    }
+
+    .ui-jqgrid td input[type=checkbox] {
+        margin-top: 6px;
+    }
+</style>
+<script>
+    $(function () {
+        $("#StoreID").bindSelectWithArr({
+            data:@MvcHtmlString.Create(@ViewBag.Stores),
+            id: "ID",
+            text: "Name",
+            selectIndex:0
+        });
+        gridList();
+    })
+    function gridList() {
+        var $gridList = $("#gridList");
+        $gridList.dataGrid({
+            url: "/SystemManage/GoodsGrant/GetGoodsGrantListExt?storeID="+$("#StoreID").val()+"&"+"grantType="+$("#IsGrant").val(),
+            height: $(window).height() - 96,
+            colModel: [
+                {
+                    label: '是否授权', name: 'IsGrant', width: 90, formatter: function (cellvalue) {
+                        return cellvalue == true ? " <span class=\"label label-success\">已授权</span>" : " <span class=\"label label-default\">未授权</span>";
+                    }, align: 'center'
+                },
+                { label: "授权信息", name: "IsGrantText", hidden: true, key: true },
+                { label: "主键", name: "ID", hidden: true, key: true },
+                { label: '条码', name: 'BarID', width: 120, align: 'center' },
+                { label: 'ERP编码', name: 'OuterBarID', width: 120, align: 'center' },
+                {
+                    label: '商品名称', name: 'Name', width: 150, align: 'center'
+                },
+                //{ label: "品名简写", name: "NameAbbr", width: 50, align: 'center' },
+                {
+                    label: '类别', name: 'Category',  width: 70, align: 'center'
+                },
+                {
+                    label: '类别编码', name: 'CategoryID', width: 60, align: 'center'
+                },
+                //{ label: "进价/成本价", name: "BuyingPrice", width: 90,formatter : "number" },
+                { label: '零售价', name: 'RetailPrice', width: 90, formatter: "number", align: 'left' }
+                //,
+                //{ label: '会员价', name: 'MemberPrice', width: 70, formatter: "number", align: 'center' }
+
+            ],
+            grouping: true,
+            cellEdit:true,
+            multiselect: true,
+            multikey : "ctrlKey",
+            onselectrow:true,
+            groupingView: {
+                groupField: ['Category'],//分组属性
+                groupColumnShow: [true, true],//是否显示分组列
+                groupText: ['<b>{0} - {1} 条记录</b>'],//表头显示数据(每组中包含的数据量)
+                groupCollapse: false,//加载数据时是否只显示分组的组信息
+                groupSummary: [true, false],//是否显示汇总  如果为true需要在colModel中进行配置summaryType:'max',summaryTpl:'<b>Max: {0}</b>'
+                groupDataSorted: true,//分组中的数据是否排序
+                groupOrder: ['desc', 'desc'], //分组后组的排列顺序
+                //showSummaryOnHide: true//是否在分组底部显示汇总信息并且当收起表格时是否隐藏下面的分组
+            },
+            viewrecords: true,
+            pager: "#gridPager",
+            sortname: 'Category,Name asc',
+            viewrecords: true,
+            loadComplete:function(xhr){
+                $("#jqgh_gridList_cb").hide()
+                $.each(xhr.rows,function(index,item){
+                    $("#jqg_gridList_"+item.ID).attr("checked",item.IsGrant)
+                    $("#jqg_gridList_"+item.ID).change(function(){
+                        if(item.BarID==null||item.BarID==''){
+                            $.modalMsg("该商品未设定条码，无法授权，请先设定条码！",'warning');
+                            $(this).attr("checked",false)
+                            return false;
+                        }
+                        item.IsGrant= !item.IsGrant
+                        this.checked= item.IsGrant;
+                        item.IsGrant?$(this).attr('checked'):$(this).removeAttr('checked');
+                        $("#gridList").setCell(item.ID,"IsGrant",item.IsGrant);
+                    })
+
+                    $("#cb_gridList").change(function(){
+                        var grid=$("#gridList")
+                        grid.getDataIDs().forEach(function(id){
+                            grid.setCell(id,"IsGrant",this.checked?1:0,{color:'green'})
+                        })
+                    })
+                })
+            },
+            onSelectRow:function(row){
+            }
+        });
+        $("#StoreID").change(function(item){
+            $("#btn_search").trigger("click");
+        })
+        $("#btn_search").click(function ()
+        {
+            var param=$gridList.jqGrid('getGridParam');
+            param.url= "/SystemManage/GoodsGrant/GetGoodsGrantListExt?storeID="+$("#StoreID").val()+"&"+"grantType="+$("#IsGrant").val();
+            $gridList.trigger('reloadGrid');
+        });
+    }
+
+    function grantGoods(el){
+        var grid=$("#gridList");
+        var selectIds=[];
+        var unselectIds=[];
+        grid.getDataIDs().forEach(function(id){
+            if(grid.getRowData(id).IsGrant.indexOf('已授权')>-1){
+                selectIds.push(id);
+            }
+            else{
+                unselectIds.push(id);
+            }
+        })
+        if($("#StoreID").val()==""){
+            return;
+        }
+        $.submitForm({
+            url: "/SystemManage/GoodsGrant/SubmitGoodsGrant",
+            param: { selectIds:selectIds.toString(),unselectIds:unselectIds.toString(),storeID:$("#StoreID").val()},
+            success: function ()
+            {
+                $.currentWindow().$("#gridList").trigger("reloadGrid");
+            }
+        })
+    }
+
+    $.arrayIntersect = function(a, b)
+    {
+        return $.merge($.grep(a, function(i)
+        {
+            return $.inArray(i, b) == -1;
+        }) , $.grep(b, function(i)
+        {
+            return $.inArray(i, a) == -1;
+        })
+        );
+    };
+    function btn_export(el)
+    {
+        $(el).attr("href","/GoodsGrant/ExportExcel?StoreID="+$("#StoreID").val());
+    }
+</script>
+
+<div class="topPanel">
+    <div class="toolbar">
+        <div class="btn-group">
+            @*<a class="btn btn-primary" onclick="grantGoods(this)" style="margin-right:15px"><span class="glyphicon glyphicon-refresh"></span>引用模板</a>*@
+            <a class="btn btn-primary dropdown-text" onclick="grantGoods(this)"><span class="glyphicon glyphicon-refresh"></span>保存授权</a>
+            <a class="btn btn-primary dropdown-text" onclick="javascript:$('#btn_search').trigger('click')"><span class="glyphicon glyphicon-refresh"></span>取消</a>
+            <a class="btn btn-primary dropdown-text" onclick="$.reload()"><span class="glyphicon glyphicon-refresh"></span></a>
+            <a class="btn btn-primary dropdown-text" onclick="btn_export(this)"><i class="fa fa-file-text"></i>导出Excel</a>
+        </div>
+        @*<div class="operate">
+                <ul class="nav nav-pills">
+                    <li class="first">已选中<span>1</span>项</li>
+
+                </ul>
+                <a href="javascript:;" class="close"></a>
+            </div>*@
+        <script>$('.toolbar').authorizeButton()</script>
+    </div>
+    <div class="search">
+        <table>
+            <tr>
+                <td>
+                    <div class="input-group">
+                        <span class="input-group-addon">门店编号</span>
+                        <select id="StoreID" name="StoreID" class="form-control required" style="width:140px">
+                            <option value="">==请选择==</option>
+                        </select>
+                        <span class="input-group-addon">授权类型</span>
+                        <select id="IsGrant" name="IsGrant" class="form-control required" style="width:90px">
+                            <option value="1">全部</option>
+                            <option value="0">已授权</option>
+                            <option value="-1">未授权</option>
+                        </select>
+                        <span class="input-group-btn">
+                            <button id="btn_search" type="button" class="btn  btn-primary"><i class="fa fa-search"></i></button>
+                        </span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+    </div>
+</div>
+<div class="gridPanel">
+    <table id="gridList"></table>
+    <div id="gridPager"></div>
+</div>

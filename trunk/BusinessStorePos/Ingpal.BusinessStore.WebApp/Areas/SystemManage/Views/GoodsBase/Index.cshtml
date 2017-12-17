@@ -1,0 +1,193 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<script src="~/Content/js/framework-ui.js"></script>
+<script src="~/Content/js/golabvar.js"></script>
+<link href="~/Content/js/easyui/jquery-easyui-1.5.2/themes/bootstrap/easyui.css" rel="stylesheet" />
+<script src="~/Content/js/easyui/jquery-easyui-1.5.2/jquery.easyui.min.js"></script>
+<script>
+    var $gridList;
+    $(function () {
+        gridList();
+    });
+    function gridList() {
+        $gridList = $("#gridList");
+        $gridList.dataGrid({
+            url: "/SystemManage/GoodsBase/GetGoodsBaseFormJson",
+            height: $(window).height() - 96,
+            colModel: [
+                { label: "主键", name: "ID", hidden: true, key: true },
+                { label: '条码', name: 'BarID', width: 130, align: 'center', edittype: "text", editable: true, editrules: { required: true } },
+                { label: 'ERP编码', name: 'OuterBarID', width: 90, align: 'center' },
+                {
+                    label: '商品名称', name: 'Name', hidden: false, width: 80, align: 'center'
+                },
+                //{ label: "品名简写", name: "NameAbbr", width: 50, align: 'center' },
+                {
+                    label: '类别', name: 'Category', width: 150, align: 'center', edittype: "select", editable: true, editrules: { required: true }, editoptions: { value: null }
+                },
+                {
+                    label: '类别编码', name: 'CategoryID', hidden: false, width: 60, align: 'center'
+                },
+                //{ label: "进价/成本价", name: "BuyingPrice", width: 70, formatter: "number", align: 'center' },
+                { label: '零售价', name: 'RetailPrice', width: 130, formatter: "number", align: 'center', edittype: "text", editable: true, editrules: { required: true, number: true } },
+                //{ label: '会员价', name: 'MemberPrice', width: 70, formatter: "number", align: 'center' },
+                { label: '备注', name: 'Remark', width: 90, align: 'center' },
+                { label: '操作', name: 'act', width: 100, index: 'act', sortable: false },
+                //{ label: '规格', name: 'SPEC', width: 60, align: 'center' },
+                //{ label: '型号', name: 'ModelNumber', width: 60, align: 'center' },
+
+                //{ label: "货号", name: "CodeNumber", width: 60 },
+                //{ label: '生产批号', name: 'BatchNo', width: 60, align: 'center' },
+                //{ label: '单位', name: 'Unit', width: 40, align: 'center' },
+                //{
+                //    label: '供应商', name: 'Supplier', hidden: false, width: 100, align: 'center'
+                //},
+                //{
+                //    label: '生产日期', name: 'ProductionDate',formatoptions:{srcformat: 'Y-m-d H:i:s', newformat: 'Y-m-d'}, hidden: false, width: 80, align: 'center'
+                //},
+                //{ label: "产地", name: "ProductionPlace" },
+                //{ label: '图片', name: 'ImageName', width: 60, align: 'center' },
+
+            ],
+            editurl: '/SystemManage/GoodsBase/SubmitGoodsBaseForm',
+
+            gridComplete: function () {
+                var ids = $gridList.jqGrid('getDataIDs');
+                for (var i = 0; i < ids.length; i++) {
+                    var cl = ids[i];
+                    be = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.editRow('"
+                      + cl + "');\">编辑</button>";
+                    se = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.saveRow('"
+                      + cl + "');\">保存</button>";
+                    ce = "  <button type='button' class='btn btn-primary btn-xs' onclick=\"gridEdit.restoreRow('"
+                      + cl + "');\">取消</button>";
+                    jQuery("#gridList").jqGrid('setRowData', ids[i],
+                        {
+                            act: be + se
+                            //+ ce
+                        });
+                }
+            },
+            groupingView: {
+                groupField: ['Category'],//分组属性
+                groupColumnShow: [true, true],//是否显示分组列
+                groupText: ['<b>{0} - {1} 条记录</b>'],//表头显示数据(每组中包含的数据量)
+                groupCollapse: false,//加载数据时是否只显示分组的组信息
+                groupSummary: [true, false],//是否显示汇总  如果为true需要在colModel中进行配置summaryType:'max',summaryTpl:'<b>Max: {0}</b>'
+                groupDataSorted: true,//分组中的数据是否排序
+                groupOrder: ['desc', 'desc'], //分组后组的排列顺序
+                //showSummaryOnHide: true//是否在分组底部显示汇总信息并且当收起表格时是否隐藏下面的分组
+            },
+            grouping: true,
+            pager: "#gridPager",
+            sortname: 'Category,Name asc',
+            viewrecords: true
+        });
+        $("#btn_search").click(function () {
+            $gridList.jqGrid('setGridParam', {
+                postData: { keyword: $("#txt_keyword").val() },
+            }).trigger('reloadGrid');
+        });
+    }
+    var gridEdit = {
+        editRow: function (cl) {
+            $gridList = $("#gridList");
+            var row = $gridList.getRowData(cl);
+            $gridList.editRow(cl);
+            $("input[name='BarID'],input[name='RetailPrice']").css({ "width": '90px', "height": "10px", "margin-top": "3px", "margin-bottom": "3px" });
+            $("select").css({ "width": '150px', "height": "22px" });
+            $("select").combotree({
+                onlyleafcheck: true,
+                url: "/SystemManage/Goods/GetGoodsTreeJson",
+                onbeforeselect: function (node) {
+                    if (onlyleaf) {
+                        var t = $(this).tree;
+                        var isleaf = t('isleaf', node.target);
+                        if (!isleaf) {
+                            return false;
+                        }
+                    } else {
+                        return true;
+                    }
+                },
+                onSelect: function (node) {
+                    row.Category = node.text;
+                    row.CategoryID = node.id;
+                    $gridList.setCell(row.ID, "CategoryID", node.id);
+                },
+                onLoadSuccess: function (data) {
+                    $("select").combotree('setValue', row.CategoryID);
+                }
+            });
+        },
+        saveRow: function (cl) {
+            var jsonResult = null;
+            var row = $gridList.getRowData(cl);
+            $gridList.saveRow(cl, {
+                extraparam: { GoodsBaseGuid: row.ID, CategoryID: row.CategoryID, RetailPrice: $("input[name='RetailPrice']").val(), BarID: $("input[name='BarID']").val() }, successfunc: function (res) {
+                    jsonResult = JSON.parse(res.responseText)
+                    //系统APIbug无法再此设置内容,因此在函数外设置
+                    $.modalMsg(jsonResult.message, jsonResult.state);
+                }
+            })
+            if (jsonResult.state == "success") {
+                $gridList.trigger("reloadGrid");
+            }
+        },
+        restoreRow: function (cl) {
+            $gridList.restoreRow(cl);
+        }
+    }
+
+    function SyncGoodsFormERP()
+    {
+        $.get("/SystemManage/GoodsBase/SyncGoodsInfoFromERP", {}, function (data) {
+            debugger
+            var d = JSON.parse(data);
+            if (d.state == 'success') {
+                $.modalMsg(d.message, "success");
+            }
+        })
+    }
+</script>
+
+<div class="topPanel">
+    <div class="toolbar">
+        <div class="btn-group">
+            <a class="btn btn-primary dropdown-text" href="/SystemManage/GoodsBase/ExportExcel"><i class="fa fa-file-text"></i>导出Excel</a>
+            <a class="btn btn-primary dropdown-text" onclick="$.reload()"><span class="glyphicon glyphicon-refresh"></span></a>
+            <a class="btn btn-primary dropdown-text" onclick="SyncGoodsFormERP()"><i class="glyphicon glyphicon-transfer"></i>同步商品</a>
+        </div>
+        @*<div class="operate">*@
+        @*<ul class="nav nav-pills">
+                <li class="first">已选中<span>1</span>项</li>
+
+            </ul>*@
+        <a href="javascript:;" class="close"></a>
+        @*</div>*@
+        <script>$('.toolbar').authorizeButton()</script>
+    </div>
+    <div class="search">
+        <table>
+            <tr>
+                <td>
+                    <div class="input-group">
+                        <input id="txt_keyword" type="text" class="form-control" placeholder="商品名/条码/类别" style="width: 200px;">
+                        <span class="input-group-btn">
+                            <button id="btn_search" type="button" class="btn  btn-primary"><i class="fa fa-search"></i></button>
+                        </span>
+                    </div>
+                </td>
+                <td></td>
+                <td></td>
+            </tr>
+        </table>
+
+    </div>
+</div>
+<div class="gridPanel">
+    <table id="gridList"></table>
+    <div id="gridPager"></div>
+</div>

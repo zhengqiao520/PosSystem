@@ -1,0 +1,116 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<script>
+    $(function () {
+        gridList();
+    })
+    function gridList() {
+        var $gridList = $("#gridList");
+        $gridList.dataGrid({
+            url: "/SystemManage/Role/GetRoleFormJson",
+            height: $(window).height() - 96,
+            colModel: [
+                { label: "主键", name: "ID", hidden: true, key: true },
+                { label: '角色名称', name: 'RoleName', width: 150, align: 'center' },
+                { label: '角色编号', name: 'RoleCode', width: 150, align: 'center' },
+                {
+                    label: '所属门店', name: 'StoreID', hidden: true, width: 80, align: 'center'
+                },
+                {
+                    label: "角色类型", name: "IsBackstage", width: 90, align: "center",
+                    formatter: function (cellvalue)
+                    {
+                        return cellvalue == true ? "后台角色" : "前台角色";
+                        //return cellvalue == 1 ? "<i class=\"fa fa-toggle-on\"></i>" : "<i class=\"fa fa-toggle-off\"></i>";
+                    }
+                },
+                { label: '备注', name: 'Description', width: 300, align: 'center' }
+            ],
+            pager: "#gridPager",
+            sortname: 'RoleCode asc',
+            viewrecords: true
+        });
+        //$("#btn_search").click(function () {
+        //    $gridList.jqGrid('setGridParam', {
+        //        postData: { keyword: $("#txt_keyword").val() },
+        //    }).trigger('reloadGrid');
+        //});
+    }
+    function btn_add() {
+        $.modalOpen({
+            id: "Form",
+            title: "新增角色",
+            url: "/SystemManage/Role/Form",
+            width: "700px",
+            height: "570px",
+            callBack: function (iframeId) {
+                top.frames[iframeId].submitForm();
+            },
+            btn: null
+        });
+    }
+    function btn_edit() {
+        var keyValue = $("#gridList").jqGridRowValue().ID;
+        $.modalOpen({
+            id: "Form",
+            title: "修改角色",
+            url: "/SystemManage/Role/Form?keyValue=" + keyValue,
+            width: "550px",
+            height: "570px",
+            callBack: function (iframeId) {
+                top.frames[iframeId].submitForm();
+            },
+            btn: null
+        });
+    }
+    function btn_delete() {
+        $.deleteForm({
+            url: "/SystemManage/Role/DeleteForm",
+            param: { keyValue: $("#gridList").jqGridRowValue().ID },
+            success: function () {
+                $.currentWindow().$("#gridList").trigger("reloadGrid");
+            }
+        })
+    }
+    function btn_details() {
+        var keyValue = $("#gridList").jqGridRowValue().ID;
+        $.modalOpen({
+            id: "Details",
+            title: "查看角色",
+            url: "/SystemManage/Role/Details?keyValue=" + keyValue,
+            width: "550px",
+            height: "620px",
+            btn: null,
+        });
+    }
+</script>
+
+<div class="topPanel">
+    <div class="toolbar">
+
+        <div class="operate">
+            <ul class="nav nav-pills">
+                <li class="first">已选中<span>1</span>项</li>
+                <li><a id="NF-edit"  onclick="btn_edit()"><i class="fa fa-pencil-square-o"></i>修改角色</a></li>
+                <li><a id="NF-delete"  onclick="btn_delete()"><i class="fa fa-trash-o"></i>删除角色</a></li>
+                <li><a id="NF-Details" authorize="yes" onclick="btn_details()"><i class="fa fa-search-plus"></i>查看角色</a></li>
+            </ul>
+            <a href="javascript:;" class="close"></a>
+        </div>
+        <script>$('.toolbar').authorizeButton()</script>
+    </div>
+        <div class="search">
+            <div class="btn-group">
+                <a class="btn btn-primary" onclick="$.reload()"><span class="glyphicon glyphicon-refresh"></span></a>
+            </div>
+            <div class="btn-group">
+                <a id="NF-add" class="btn btn-primary dropdown-text" onclick="btn_add()"><i class="fa fa-plus"></i>新建角色</a>
+            </div>
+        </div>
+</div>
+<div class="gridPanel">
+    <table id="gridList"></table>
+    <div id="gridPager"></div>
+</div>

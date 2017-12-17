@@ -1,0 +1,144 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<script src="~/Content/js/datepicker/WdatePicker.js"></script>
+<script>
+    $(function () {
+        gridList();
+        initData();
+    })
+    function initData() {
+        $("#StoreID").bindSelectWithArr({
+            data: top.clients.storeInfo,
+            id: "ID",
+            text: "StoreName",
+            change: function () {
+                var qk = $("#StoreID").val(), ele = $("#GuiderID"), str = "</option>", index = ele.html().indexOf(str), qlen = str.length, s = $.trim(ele.html().substring(0, index + qlen));
+                ele.html(s);
+                if (qk) {
+                    $.get("/SaleManage/Sale/GetGuiderInfoListByStoreID", { storeID: qk }, function (data) {
+                        if (data && data != "null") {
+                            data = JSON.parse(data);
+                            ele.bindSelectWithArr({
+                                data: data,
+                                id: "GuiderID",
+                                text: "GuderName"
+                            });
+                        }
+                    });
+                }
+            }
+        });
+    }
+    function gridList() {
+        var $gridList = $("#gridList");
+        $gridList.dataGrid({
+            url: "/SystemManage/Report/SummarySaleJson",
+            height: $(window).height() - 128,
+            colModel: [
+                { label: '主键', name: 'Id', hidden: true },
+                //{ label: '流水号', name: 'RecordSerial', width: 90, align: 'center' },
+                { label: '小票号', name: 'TicketCode', width: 120, align: 'center' },
+                {
+                    label: '销售时间', name: 'SaleDate', width: 120, align: 'center'
+                },
+                { label: '门店名称', name: 'StoreName', width: 90, align: 'center' },
+                { label: '销售数量', name: 'TotalCount', width: 80, align: 'center' },
+                //{ label: '商品金额', name: 'GoodsAmount', width: 80, align: 'center' },
+                { label: '优惠金额', name: 'DiscountAmount', width: 80, align: 'center', formatter: 'number', formatoptions: { thousandsSeparator: ',' } },
+                { label: '实收金额', name: 'GoodsAmount', width: 80, align: 'center', formatter: 'number', formatoptions: { thousandsSeparator: ',' } },
+                //{ label: '合计金额', name: 'TotalAmount', width: 80, align: 'center' },
+
+                { label: '支付方式', name: 'PayType', width: 80, align: 'center' },
+                { label: '收银员', name: 'Cashier', width: 80, align: 'center' },
+                { label: '导购', name: 'Guider', width: 80, align: 'center' },
+                { label: '退货数量', name: 'ReturnGoodsCount', width: 80, align: 'center' },
+                { label: '退货金额', name: 'RefundAmount', width: 80, align: 'left', formatter: 'number', formatoptions: { thousandsSeparator: ',' } },
+            ],
+            //pager: "#gridPager",
+            sortname: 'SaleDate desc',
+            viewrecords: true
+        });
+        $("#btn_search").click(function () {
+            var params = { PosID: null };
+            $.each($(".input-group>input,select"), function (index, item) {
+                var $Item = $(item);
+                var name = $Item.attr("name");
+                params[name] = $.trim($Item.val());
+            });
+            params.Guider = params.GuiderID ? $("#GuiderID").find("option:selected").text() : '';
+            $gridList.jqGrid('setGridParam', {
+                postData: params,
+            }).trigger('reloadGrid');
+        });
+    }
+
+    function formaterPay(cellvalue, options, rowObject) {
+        if (cellvalue == "-1") {
+            return "";
+        }
+        return PosGlobal.PayType[cellvalue]
+    }
+    function btn_export(el) {
+
+        var params = getFormObject();
+        $(el).attr("href", "/Report/ExportSummarySale?" + $.objToUrl(params));
+    }
+    function getFormObject() {
+        var params = {};
+        $.each($(".input-group>input,select"), function (index, item) {
+            var $Item = $(item);
+            var name = $Item.attr("name");
+            params[name] = $.trim($Item.val());
+        });
+        debugger
+        return params;
+    }
+</script>
+
+<div class="topPanel">
+    <div class="toolbar">
+        <div class="btn-group">
+            <a id="NF-Export" class="btn btn-primary dropdown-text" onclick="btn_export(this)"><i class="fa fa-file-text"></i>导出Excel</a>
+            <a class="btn btn-primary" onclick="$.reload()"><span class="glyphicon glyphicon-refresh"></span></a>
+        </div>
+        <script>$('.toolbar').authorizeButton()</script>
+    </div>
+    <div class="search">
+        <table>
+            <tr>
+                <td>
+                    <div class="input-group">
+                        <span class="input-group-addon">门店名称</span>
+                        <select id="StoreID" name="StoreID" class="form-control required">
+                            <option value="">==请选择==</option>
+                        </select>
+                        <span class="input-group-addon">销售日期</span><input id="SaleStartTime" name="SaleStartTime" type="text" style="width: 90px;" class="form-control input-wdatepicker" onfocus="WdatePicker()" />
+                        <input id="SaleEndTime" name="SaleEndTime" type="text" style="width: 90px;" class="form-control input-wdatepicker" onfocus="WdatePicker()" />
+                        <span class="input-group-addon">付款方式</span><select id="PayType" name="PayType" class="form-control" style="width: 80px;">
+                            <option value="">==请选择==</option>
+                            <option value="0">微信</option>
+                            <option value="1">支付宝</option>
+                            <option value="2">银行卡</option>
+                            <option value="3">商场代收</option>
+                            <option value="4">现金</option>
+
+                        </select>
+                        <span class="input-group-addon">导购</span>
+                        <select id="GuiderID" name="GuiderID" class="form-control" style="width: 80px;">
+                            <option value="">==请选择==</option>
+                        </select>
+                        <span class="input-group-btn">
+                            <button id="btn_search" type="button" class="btn  btn-primary"><i class="fa fa-search"></i></button>
+                        </span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="gridPanel">
+    <table id="gridList"></table>
+    <div id="gridPager"></div>
+</div>

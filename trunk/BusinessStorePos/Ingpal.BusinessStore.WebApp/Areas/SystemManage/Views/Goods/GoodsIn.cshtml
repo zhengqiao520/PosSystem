@@ -1,0 +1,161 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<script>
+    $(function () {
+        gridList();
+    })
+    function gridList() {
+        var $gridList = $("#gridList");
+        $gridList.dataGrid({
+            url: "/GoodsStock/GetGoodsInListJson",
+            height: $(window).height() - 128,
+            colModel: [
+                { label: 'ID', name: 'ID', hidden: true, width: 50, align: 'center' },
+                { label: '单号', name: 'GoodsInCode', width: 130, align: 'center' },
+                { label: '门店编号', name: 'StoreID', width: 120, align: 'center' },
+                 {
+                     label: '入库日期', name: 'StockInDate', width: 80, align: 'left',
+                     formatter: "date", formatoptions: { srcformat: 'Y-m-d', newformat: 'Y-m-d' }
+                 },
+                { label: '入库数量', name: 'StockInQuantity', width: 80, align: 'center' },
+                { label: '入库金额', name: 'StockInAmount', width: 80, align: 'center' },
+                { label: '入库人', name: 'StockInHumanName', width: 80, align: 'center' },
+                { label: '入库人ID', name: 'StockInHumanID',hidden:true, width: 80, align: 'center' },
+                { label: '备注', name: 'Remrks', width: 200, align: 'left' }
+            ],
+            pager: "#gridPager",
+            sortname: 'Description asc,FoundedTime desc',
+            viewrecords: true
+        });
+        $("#btn_search").click(function () {
+            $gridList.jqGrid('setGridParam', {
+                postData: { keyword: $("#txt_keyword").val() },
+            }).trigger('reloadGrid');
+        });
+    }
+    function btn_add() {
+        $.modalOpenDefine({
+            id: "Form",
+            title: "入库信息",
+            url: "/SystemManage/Goods/GoodsInForm",
+            width: "1024px",
+            height: "650px",
+            btn: ['商品入库', '关闭', '添加到待入库'],
+            btnclass: ['btn btn-primary', 'btn btn-primary', 'btn btn-danger'],
+            callBack: function (iframeId) {
+                top.frames[iframeId].submitForm();
+                return true;
+            }, inStock: function (iframeId) {
+                top.frames[iframeId].inStock();
+            }
+        });
+    }
+
+
+    $.modalOpenDefine = function (options) {
+        var defaults = {
+            id: null,
+            title: '系统窗口',
+            width: "100px",
+            height: "100px",
+            url: '',
+            shade: 0.3,
+            btn: ['确认', '关闭'],
+            btnclass: ['btn btn-primary', 'btn btn-danger'],
+            callBack: null
+        };
+        var options = $.extend(defaults, options);
+        var _width = top.$(window).width() > parseInt(options.width.replace('px', '')) ? options.width : top.$(window).width() + 'px';
+        var _height = top.$(window).height() > parseInt(options.height.replace('px', '')) ? options.height : top.$(window).height() + 'px';
+        top.layer.open({
+            id: options.id,
+            type: 2,
+            shade: options.shade,
+            title: options.title,
+            fix: false,
+            area: [_width, _height],
+            content: options.url,
+            btn: options.btn,
+            btnclass: options.btnclass,
+            yes: function () {
+                options.callBack(options.id)
+            }, cancel: function () {
+                return true;
+            }, btn3: function (index, layero) {
+                options.inStock(options.id)
+                return false
+            }
+        });
+    }
+    //function btn_edit() {
+    //    var keyValue = $("#gridList").jqGridRowValue().ID;
+    //    $.modalOpen({
+    //        id: "Form",
+    //        title: "修改门店",
+    //        url: "/SystemManage/Store/Form?keyValue=" + keyValue,
+    //        width: "700px",
+    //        height: "520px",
+    //        callBack: function (iframeId) {
+    //            top.frames[iframeId].submitForm();
+    //        }
+    //    });
+    //}
+    //function btn_delete() {
+    //    $.deleteForm({
+    //        url: "/SystemManage/Store/DeleteForm",
+    //        param: { keyValue: $("#gridList").jqGridRowValue().ID },
+    //        success: function () {
+    //            $.currentWindow().$("#gridList").trigger("reloadGrid");
+    //        }
+    //    })
+    //}
+    //function btn_details() {
+    //    var keyValue = $("#gridList").jqGridRowValue().F_Id;
+    //    $.modalOpen({
+    //        id: "Details",
+    //        title: "查看详情",
+    //        url: "/SystemManage/User/Details?keyValue=" + keyValue,
+    //        width: "700px",
+    //        height: "550px",
+    //        btn: null,
+    //    });
+    //}
+</script>
+
+<div class="topPanel">
+    <div class="toolbar">
+        <div class="btn-group">
+            <a class="btn btn-primary" onclick="$.reload()"><span class="glyphicon glyphicon-refresh"></span></a>
+        </div>
+        <div class="btn-group">
+            <a id="NF-add"  class="btn btn-primary dropdown-text" onclick="btn_add()"><i class="fa fa-plus"></i>商品入库</a>
+        </div>
+        <div class="operate">
+            <ul class="nav nav-pills">
+                <li class="first">已选中<span>1</span>项</li>
+            </ul>
+            <a href="javascript:;" class="close"></a>
+        </div>
+        <script>$('.toolbar').authorizeButton()</script>
+    </div>
+    @*<div class="search">
+        <table>
+            <tr>
+                <td>
+                    <div class="input-group">
+                        <input id="txt_keyword" type="text" class="form-control" placeholder="账户/姓名/手机" style="width: 200px;">
+                        <span class="input-group-btn">
+                            <button id="btn_search" type="button" class="btn  btn-primary"><i class="fa fa-search"></i></button>
+                        </span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>*@
+</div>
+<div class="gridPanel">
+    <table id="gridList"></table>
+    <div id="gridPager"></div>
+</div>

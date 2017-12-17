@@ -1,0 +1,190 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<link href="/Content/js/select2/select2.min.css" rel="stylesheet" />
+<script src="/Content/js/select2/select2.min.js"></script>
+<script src="/Content/js/validate/jquery.validate.min.js"></script>
+<script src="/Content/js/datepicker/WdatePicker.js"></script>
+<script>
+    var keyValue = $.request("keyValue");
+    $(function () {
+        gridList();
+        if (!keyValue) {
+
+        }
+        $("#StoreIds").bindSelectWithArr({
+            data:@MvcHtmlString.Create(@ViewBag.Stores),
+            id: "ID",
+            text: "Name"
+        });
+        if (!!keyValue) {
+            $.ajax({
+                url: "/SystemManage/GoodsDiscount/GetEventStoreFormJson",
+                data: { keyValue: keyValue },
+                dataType: "json",
+                async: false,
+                success: function (data) {
+                    $("#form1").formSerialize(data);
+                    $("#ConditionName").val(data.StoreEventConfig.ConditionName)
+                    $("#ConditionValue").val(data.StoreEventConfig.ConditionValue)
+                    if (data.StoreIds.length > 0) {
+                        $("#StoreIds").val(data.StoreIds.split(",")).trigger("change");
+                    }
+                }
+            });
+        }
+        $("#StoreIds").select2({
+            multiple: true,
+        });
+        $("#gview_gridDetail").css("border", "none");
+        $("#RangeFlag").change(function(evt){
+            debugger
+            alert(this.value);
+        })
+    })
+
+    function gridList() {
+        $("#btn_search").click(function () {
+            $gridList.jqGrid('setGridParam', {
+                postData: { keyword: $("#txt_keyword").val() },
+            }).trigger('reloadGrid');
+        });
+    }
+
+    function submitForm()
+    {
+        if (!$('#form1').formValid()) {
+            return false;
+        }
+        if(confirm("请再次检查录入信息是否正确!"))
+        {
+            var formData = $("#form1").formSerialize();
+            formData.StoreIds = formData.StoreIds == null ? "" : formData.StoreIds.toString();
+
+            formData.StoreEventConfig = {ConditionName:formData.ConditionName,ConditionValue:formData.ConditionValue};
+            $.submitForm({
+                url: "/SystemManage/GoodsDiscount/SubmitFreeGoodsEvent?keyValue=" + keyValue,
+                param: formData,
+                success: function () {
+                    $.currentWindow().$("#gridList").resetSelection();
+                    $.currentWindow().$("#gridList").trigger("reloadGrid");
+                }
+            })
+        }
+    }
+
+    function getConfigList() {
+        var valid=true;
+        $("#1").find('td:eq(0)').trigger('click')
+        var grid = $("#gridDetail")
+        var postData = grid.jqGrid("getRowData");
+        var allCountID = grid.jqGrid('getDataIDs')
+        var rowData = grid.jqGrid('getRowData', allCountID[allCountID.length - 1]);
+        if(rowData.ConditionName==undefined||rowData.ConditionValue==undefined){
+            valid=false;
+        }
+        if (!(rowData.ConditionName == '')&&!(rowData.ConditionValue == '')) {
+            postData.push(rowData)
+        }
+        return postData
+    }
+    function addEmptyRule() 
+    {
+        var allCountID = $("#gridDetail").jqGrid('getDataIDs');
+        $("#gridDetail").addRowData(allCountID.length+1, {}, "last");
+    }
+</script>
+<form id="form1">
+    <div style="margin-top: 10px; margin-left: 10px; margin-right: 10px;">
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#">基本信息</a></li>
+
+        </ul>
+        <div style="padding-top: 20px; margin-right: 30px;">
+            <table class="form">
+                <tr>
+                    <th class="formTitle requred">*活动名称</th>
+                    <td colspan="3" class="formValue">
+                        <input id="Name" name="Name
+                               " maxlength="150" type="text" class="form-control required" placeholder="请输入活动名称" />
+                    </td>
+                </tr>
+                <tr>
+                    <th class="formTitle requred">活动标签</th>
+                    <td colspan="3" class="formValue">
+                        <input id="EventTag" name="EventTag" maxlength="150" type="text" class="form-control required" placeholder="请输入活动标签" />
+                    </td>
+                </tr>
+                <tr>
+                    <th class="formTitle">活动范围</th>
+                    <td class="formValue">
+                        <label><input name="RangeFlag" type="radio" value="指定门店" checked />指定门店</label>
+                        @*<label><input name="RangeFlag" type="radio" value="所有门店"  />所有门店</label>*@
+                    </td>
+                </tr>
+                <tr>
+                    <th class="formTitle">活动门店</th>
+                    <td>
+                        <select id="StoreIds" name="StoreIds" required class="select2-container-multi" multiple="multiple"></select>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="formTitle requred">活动时间</th>
+                    <td colspan="3" class="formValue">
+                        <input id="StartTime" name="StartTime" style="width:180px; display:inline"  required type="text" class="form-control input-wdatepicker" onfocus="WdatePicker()" />--<input id="EndTime" name="EndTime" style="width:180px; display:inline" type="text" required class="form-control input-wdatepicker" onfocus="WdatePicker()" />
+                    </td>
+                </tr>
+                @*<tr>
+                    <th class="formTitle requred">满减设置</th>
+                    <td class="formValue">
+                        <table id="gridDetail"></table>
+                    </td>
+                    <th class="formTitle requred">设置</th>
+                    <td class="formValue">
+                        <table id="gridDetail"></table>
+                    </td>
+                </tr>*@
+                <tr>
+                    <th class="formTitle requred">买</th>
+                    <td class="formValue" colspan="3">
+                        <div style="display:inline">
+                            <div style="float:left;">
+                                 <textarea id="ConditionName" name="ConditionName" maxlength="200" class="form-control required" style="height:85px;width:462px" placeholder="请输入条码，多个条码以 | 分隔开，相同条码多个数量格式为：条码*数量"></textarea>
+                            </div>
+                            @*<div style="float:right;">
+                                <button class="btn btn-default" id="btnQuery" style="" type="button">请<br />选<br />择<br />商<br />品</button>
+                            </div>*@
+                        </div>
+
+                    </td>
+
+                </tr>
+                <tr>
+                    <th class="formTitle requred">赠</th>
+                    <td class="formValue" colspan="3">
+                        <div style="display:inline">
+                            <div style="float:left;">
+                                <textarea id="ConditionValue" name="ConditionValue" maxlength="200" class="form-control required" style="height:85px;width:462px" placeholder="请输入条码，多个条码以 | 分隔开"></textarea>
+                            </div>
+                            @*<div style="float:right;">
+                                <button class="btn btn-default" id="btnQuery" style="" type="button">请<br />选<br />择<br />商<br />品</button>
+                            </div>*@
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="formTitle" valign="top" style="padding-top: 5px;">
+                        备注
+                    </th>
+                    <td class="formValue" colspan="3">
+                        <textarea id="Remark" name="Remark" maxlength="200" class="form-control" style="height: 60px;"></textarea>
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+    </div>
+</form>
+
+

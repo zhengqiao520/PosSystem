@@ -1,0 +1,325 @@
+﻿@{
+    ViewBag.Title = "Form";
+    Layout = "~/Views/Shared/_Index.cshtml";
+}
+<script src="~/Content/js/validate/jquery.validate.min.js"></script>
+<script src="~/Content/js/datepicker/WdatePicker.js"></script>
+@*<link href="~/Content/css/framework-ui.css" rel="stylesheet" />*@
+<script src="~/Content/js/framework-ui.js"></script>
+<script src="~/Content/js/golabvar.js"></script>
+<link href="~/Content/js/easyui/jquery-easyui-1.5.2/themes/bootstrap/easyui.css" rel="stylesheet" />
+<script src="~/Content/js/easyui/jquery-easyui-1.5.2/jquery.easyui.min.js"></script>
+<script>
+    var keyValue = $.request("keyValue");
+    $(function () {
+
+        initControl();
+
+        //if (!!keyValue) {
+        //    $.ajax({
+        //        url: "/SystemManage/Goods/GetGoodsFormJson",
+        //        data: { keyValue: keyValue },
+        //        dataType: "json",
+        //        async: false,
+        //        success: function (data) {
+        //
+        //            $("#form1").formSerialize(data);
+        //        }
+        //    });
+        //}
+    });
+    function gridList() {
+        $gridList = $("#gridList");
+        $gridList.dataGrid({
+            height: $(window).height() - 128,
+            colModel: [
+                { label: '门店编号', name: 'StoreID', hidden: true, width: 50, align: 'center' },
+                { label: '商品条码', name: 'BarID', width: 80, align: 'center' },
+                { label: '商品名称', name: 'Name', width: 70, align: 'center' },
+                { label: '商品类别', name: 'Category', width: 60, align: 'center' },
+                { label: '类别编号', name: 'CategoryID',hidden:true, width: 0, align: 'center' },
+                { label: '成本价', name: 'BuyingPrice', width: 60, align: 'center' },
+                { label: '零售价', name: 'RetailPrice', width: 60, align: 'center' },
+                { label: '入库数量', name: 'InQuantityStock', width: 60, align: 'center' },
+                { label: '入库金额', name: 'InstockAmount', width: 60, align: 'center' },
+                { label: '规 格', name: 'SPEC', width: 60, align: 'center' },
+                { label: '型 号', name: 'ModelNumber', width: 60, align: 'center' },
+                { label: '货 号', name: 'CodeNumber', width: 60, align: 'center' },
+                { label: '生产批号', name: 'BatchNo', width: 60, align: 'center' },
+                { label: '单 位', name: 'Unit', width: 60, align: 'center' },
+                { label: '供应商', name: 'Supplier', width: 90, align: 'center' },
+                { label: '产 地', name: 'ProductionPlace',width: 60, align: 'center' },
+                { label: '备 注', name: 'Remark', hidden: true, width: 60, align: 'left' }
+            ],
+            shrinkToFit:false,
+            autoScroll: false,
+            sortname: 'RetailPrice desc,StockQuantity desc',
+            viewrecords: true
+        });
+        $("#btn_search").click(function () {
+
+            var params = {};
+            $.each($(".input-group>input,select"), function (index, item) {
+                var $Item = $(item);
+                var name = $Item.attr("name");
+                params[name] = $.trim($Item.val());
+            });
+            $gridList.jqGrid('setGridParam', {
+                postData: params,
+            }).trigger('reloadGrid');
+        });
+    }
+    function initControl() {
+        gridList();
+        var $lis = $(".nav.nav-tabs li");
+        $lis.on("click", function (index)
+        {
+
+            var li = $lis.eq(0);
+            if ($(this).id=="tab1") {
+                $($(".layui-layer-btn>a")[0]).show()
+            }
+            else {
+                $($(".layui-layer-btn>a")[0]).hide()
+            }
+            li.addClass("active").siblings().removeClass("active");
+            jQuery('#myTabContent>div').removeClass("in active").eq(0).addClass("in active");
+        })
+
+        $("#ParentId").bindSelect({
+            url: "/SystemManage/Goods/GetGoodsTreeJson",
+        });
+        $("#CategoryID").combotree({
+            onlyleafcheck: false,
+            url: "/SystemManage/Goods/GetGoodsTreeJson",
+            onbeforeselect: function (node) {
+                if (onlyleaf) {
+                    var t = $(this).tree;
+                    var isleaf = t('isleaf', node.target);
+                    if (!isleaf) {
+                        return false;
+                    }
+                } else {
+                    return true;
+                }
+            },
+            onSelect: function (node) {
+                $("#Category").val(node.text)
+            },
+            onloadsuccess: function (row, data) {
+                $("#Category").combotree('tree').tree("collapseall");
+            }
+        });
+        $("#btnQuery").on("click", GetGoodsByCode)
+        //$("#IsAdministrator").bindSelect()
+        //$("#EnabledMark").bindSelect()
+    }
+
+    function GetGoodsByCode(isCheckBar)
+    {
+
+        if (isCheckBar) {
+            if (!$("#BarID").val()) return;
+        }
+        $.get("/SystemManage/Goods/GetGoodsListByCodeOrName", { barID: $("#BarID").val() }, function (data) {
+
+            var formdata = JSON.parse(data)
+            $("#form1").formSerialize(formdata);
+            $("#CategoryID").combotree('setValue', formdata.CategoryID)
+            $("#InQuantityStock,#Remark").val("");
+
+        })
+    }
+    function getGoodInList() {
+
+        var postData = $("#gridList").jqGrid("getRowData");
+        var allCountID = $gridList.jqGrid('getDataIDs')
+        postData.push($gridList.jqGrid('getRowData', allCountID[allCountID.length - 1]))
+        return postData
+    }
+    function submitForm()
+    {
+        //if (!$('#form1').formValid()) {
+        //    return false;
+        //}
+
+
+        if (!getGoodInList().length > 0) {
+            $.modalMsg("没有可入库商品！", "error");
+            return false;
+        }
+        $.submitForm({
+            url: "/SystemManage/Goods/SubmitGoodsInList",
+            param: { listGoodsEntity: getGoodInList() },
+            success: function ()
+            {
+                $.currentWindow().$("#gridList").trigger("reloadGrid");
+            }
+        })
+    }
+    function inStock() {
+        if (!$('#form1').formValid()) {
+            return false;
+        }
+
+        var params = $("#form1").formSerialize();
+        params.InstockAmount = parseFloat(params.RetailPrice) * parseInt(params.InQuantityStock);
+        $("#gridList").addRowData("1", params, "first");
+        $.modalMsg("添加待入库成功！", 'success');
+        $(':input', '#form1')
+         .not(':button, :submit, :reset, :hidden')
+        .val('')
+        .removeAttr('checked')
+        .removeAttr('selected');
+
+        //var goodsInList = getGoodInList();
+        //$.each(goodsInList, function (index,item) {
+        //
+        //    if (item.BarID == params.BarID) {
+        //        var InQuantityStock = parseInt(goodsInList[index].InQuantityStock);
+        //        var wInQuantityStock = parseInt(item.InQuantityStock);
+
+        //        var InstockAmount = parseFloat(goodsInList[index].InstockAmount)
+        //        var wInstockAmount = parseFloat(item.InQuantityStock);
+
+        //        goodsInList[index].InQuantityStock = InQuantityStock + wInQuantityStock;
+        //        goodsInList[index].InstockAmount = InstockAmount + wInstockAmount;
+        //    }
+        //})
+        $("#gridList").trigger("reloadGrid");
+    }
+</script>
+<form id="form1">
+    <div style="margin-top: 10px; margin-left: 10px; margin-right: 10px;">
+        <ul class="nav nav-tabs">
+            <li class="active" id="tab1" data-toggle="tab"><a href="#inStockForm">基本信息</a></li>
+            <li id="tab2"><a href="#listStock" data-toggle="tab">待入库</a></li>
+        </ul>
+
+        <div id="myTabContent" class="tab-content">
+            <div class="tab-pane fade in active" id="inStockForm">
+                <table class="form" style="margin-top:20px; width:95%">
+                    <tr>
+                        <th class="formTitle">商品条码</th>
+                        <td class="formValue">
+                            @*<input id="BarID" name="BarID" type="text" maxlength="20" class="form-control required" placeholder="请输入条码" />*@
+                            <div class="input-group">
+                                <input type="text" id="BarID" name="BarID" class="form-control" placeholder="Search for...">
+                                <span class="input-group-btn">
+                                    <button class="btn btn-default" id="btnQuery" style="width:25px; height:22px;margin-left:5px;" type="button">查</button>
+                                </span>
+                            </div><!-- /input-group -->
+                        </td>
+                        <th class="formTitle">商品名称</th>
+                        <td class="formValue">
+                            <input id="Name" name="Name" type="text" maxLength="40" class="form-control required" placeholder="请输入商品名称" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="formTitle">规    格</th>
+                        <td class="formValue">
+                            <input id="SPEC" name="SPEC" type="text" maxLength="20" class="form-control " placeholder="规格" />
+                        </td>
+                        <th class="formTitle">型    号</th>
+                        <td class="formValue">
+                            <input id="ModelNumber" name="ModelNumber" maxLength="20" type="text" class="form-control " placeholder="型    号" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="formTitle">类    别</th>
+                        <td class="formValue">
+                            <input class="form-control easyui-combotree" id="CategoryID" name="CategoryID" data-options="method:'get',valueField:'id',textField:'text',required:true" style="width:100%">
+                            @*<input  name="Category" id="Category"  style="display:none" type="text" maxLength="20" class="form-control " placeholder="规格" />*@
+                            <input id="Category" name="Category" type="text" style="display:none" class="form-control required" placeholder="类    别" />
+                        </td>
+                        <th class="formTitle">货   号</th>
+                        <td class="formValue">
+                            <input id="CodeNumber" name="CodeNumber" maxLength="20" type="text" class="form-control" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="formTitle">生产批号</th>
+                        <td class="formValue">
+                            <input id="BatchNo" name="BatchNo" maxLength="20" type="text" class="form-control" placeholder="生产批号" />
+                        </td>
+                        <th class="formTitle">单   位</th>
+                        <td class="formValue">
+                            <input id="Unit" name="Unit" type="text" class="form-control" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="formTitle">供应商</th>
+                        <td class="formValue">
+                            <input id="Supplier" name="Supplier" maxLength="150" type="text" class="form-control " placeholder="供应商" />
+                        </td>
+                        <th class="formTitle">生产日期</th>
+                        <td class="formValue">
+                            <input id="ProductionDate" name="ProductionDate" type="text" class="form-control input-wdatepicker" onfocus="WdatePicker()" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="formTitle">进价/成本价</th>
+                        <td class="formValue">
+                            <input id="BuyingPrice" name="BuyingPrice" type="number" min="0" pattern="([1-9]\d*(\.\d*[1-9])?)|(0\.\d*[1-9])" class="form-control required" placeholder="进价/成本价" />
+                        </td>
+                        <th class="formTitle">零售价</th>
+                        <td class="formValue">
+                            <input id="RetailPrice" name="RetailPrice" type="number" min="0" pattern="([1-9]\d*(\.\d*[1-9])?)|(0\.\d*[1-9])" class="form-control required" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="formTitle">会员价</th>
+                        <td class="formValue">
+                            <input id="MemberPrice" name="MemberPrice" min="0" pattern="([1-9]\d*(\.\d*[1-9])?)|(0\.\d*[1-9])" type="number" class="form-control" />
+                        </td>
+                        <th class="formTitle">入库数量</th>
+                        <td class="formValue">
+                            <input id="InQuantityStock" name="InQuantityStock" type="number" min="1" max="9999" class="form-control required" placeholder="请输入入库数量" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="formTitle">产   地</th>
+                        <td class="formValue">
+                            <input id="ProductionPlace" name="ProductionPlace" maxLength="50" type="text" class="form-control " placeholder="产   地" />
+                        </td>
+                        <th class="formTitle">备注</th>
+                        <td class="formValue">
+                            <input id="Remark" name="Remark" type="text" maxLength="200" class="form-control" />
+                        </td>
+                    </tr>
+                    @*<tr>
+                <th class="formTitle">是否允许参与积分</th>
+                <td class="formValue">
+                    <div class="ckbox">
+                        <input id="AllowMemberScore" name="AllowMemberScore" type="checkbox" checked="checked"><label for="AllowMemberScore">是否允许参与积分</label>
+                    </div>
+                </td>
+                <th class="formTitle">是否允许打折</th>
+                <td class="formValue">
+                    <div class="ckbox">
+                        <input id="AllowDiscount" name="AllowDiscount" type="checkbox" checked="checked"><label for="AllowDiscount">是否允许打折</label>
+                    </div>
+                </td>
+            </tr>*@
+                    @*<tr>
+                <th class="formTitle" valign="top" style="padding-top: 5px;">备注
+                </th>
+                <td class="formValue" colspan="3">
+                    <textarea id="Remark" name="Remark" class="form-control" style="height: 60px;"></textarea>
+                </td>
+            </tr>*@
+                </table>
+            </div>
+            <div class="tab-pane fade" id="listStock" style="padding:10px">
+                @*<div class="gridPanel" style="margin-top:20px; margin-left:20px">*@
+                    <table id="gridList"></table>
+                    <div id="gridPager"></div>
+                @*</div>*@
+            </div>
+            @*<div style="padding-top: 20px; margin-right: 30px;">
+
+            </div>*@
+
+        </div>
+        </div>
+</form>
